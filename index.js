@@ -10,6 +10,8 @@ const data = new Map();
 data.set(1, {name: "Mario", surname: "Rossi"});
 data.set(2, {name: "Luigi", surname: "Verdi"});
 
+var dataID = 3;
+
 app.get('/people', (req, resp) => {
   if (!req.accepts('application/json')) {
     resp.sendStatus(406);
@@ -72,7 +74,8 @@ app.post('/people', (req, resp) => {
   const name = new String(input.name);
   const surname = new String(input.surname);
   
-  const newId = data.size + 1;
+  dataID++;
+  const newId = dataID;
   data.set(newId, {name: name, surname: surname});
   
   resp.status(201).type('application/json').send(JSON.stringify({id: newId, name: name, surname: surname}));
@@ -91,6 +94,7 @@ app.delete('/people/:id', (req, resp) => {
   }
   
   data.delete(id);
+  
   resp.sendStatus(200);
 });
 

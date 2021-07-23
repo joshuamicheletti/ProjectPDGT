@@ -1,4 +1,5 @@
 const express = require("express");
+const fileUpload = require('express-fileupload');
 const app = express();
 const sha256 = require("js-sha256");
 const cookieparser = require("cookie-parser");
@@ -10,7 +11,7 @@ const data = new Map();
 data.set(1, {name: "Mario", surname: "Rossi"});
 data.set(2, {name: "Luigi", surname: "Verdi"});
 
-var dataID = 3;
+var dataID = 2;
 
 app.get('/people', (req, resp) => {
   if (!req.accepts('application/json')) {
@@ -192,6 +193,33 @@ app.post('/login', (req, resp) => {
 });
 
 
+
+// app.use(fileUpload());
+
+// app.post('/upload', function(req, res) {
+//   if (!req.files || Object.keys(req.files).length === 0) {
+//     return res.status(400).send('No files were uploaded.');
+//   }
+
+//   // The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
+//   let sampleFile = req.files.sampleFile;
+
+//   // Use the mv() method to place the file somewhere on your server
+//   sampleFile.mv('/somewhere/on/your/server/filename.jpg', function(err) {
+//     if (err)
+//       return res.status(500).send(err);
+
+//     res.send('File uploaded!');
+//   });
+// });
+
+app.post('/upload', function(req, res) {
+  if (!req.files) {
+    res.status(400).send('No files uploaded');
+  } else {
+    res.status(200).send("File Uploaded!").end();
+  }
+});
 
 
 

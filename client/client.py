@@ -8,7 +8,7 @@ def checkItems():
   y = json.loads(x.text)
 
   for i in range(len(y)):
-    print(str(i + 1) + "> " + y[i]["name"] + " " + y[i]["surname"])
+    print(str(y[i]["id"]) + "> " + y[i]["name"] + " " + y[i]["surname"])
 
 
 def deleteItems(target):
@@ -106,6 +106,13 @@ def main():
       elif command == 2:
         target = int(input("Enter the element you want to delete: "))
         deleteItems(target)
+
+      elif command == 3:
+        #send file
+        files = {'upload_file': open('../mod.jar','rb')}
+        response = requests.post('https://projectpdgt.herokuapp.com/people', files=files)
+        print(response.text)
+
 
       elif command == 0:
         running = False

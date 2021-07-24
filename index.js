@@ -1,8 +1,9 @@
 const express = require("express");
-// const fileUpload = require('express-fileupload');
 const app = express();
 const sha256 = require("js-sha256");
 const cookieparser = require("cookie-parser");
+const multer  = require('multer')
+const upload = multer({ dest: 'uploads/' })
 
 app.use(express.json());
 app.use(cookieparser());
@@ -213,8 +214,8 @@ app.post('/login', (req, resp) => {
 //   });
 // });
 
-app.post('/upload', function(req, res) {
-  if (!req.files) {
+app.post('/upload', upload.single('avatar'), function(req, res) {
+  if (!req.file) {
     res.status(400).send('No files uploaded');
   } else {
     res.status(200).send("File Uploaded!").end();

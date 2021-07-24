@@ -218,7 +218,7 @@ app.post('/upload', upload.single('avatar'), function(req, res) {
   if (!req.file) {
     res.status(400).send('No files uploaded');
   } else {
-    res.status(200).send("File Uploaded!").json(res.file).end();
+    res.status(200).send("File Uploaded!").json(req.file).end();
   }
 });
 

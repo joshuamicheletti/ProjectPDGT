@@ -19,4 +19,5 @@ bin-release/
 
 client/
 *.jar
+node_modules/
 

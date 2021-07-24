@@ -218,7 +218,23 @@ app.post('/upload', upload.single('avatar'), function(req, res) {
   if (!req.file) {
     res.status(400).send('No files uploaded');
   } else {
-    res.status(200).send("File Uploaded!").json(req.file).end();
+
+    var info;
+
+    info = {
+      fieldname: req.file.fieldname,
+      originalName: req.file.originalname,
+      encoding: req.file.encoding,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      destination: req.file.destination,
+      filename: req.file.filename,
+      path: req.file.path,
+      buffer: req.file.buffer
+    }
+
+
+    res.json(info);
   }
 });
 

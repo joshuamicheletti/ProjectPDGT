@@ -2,8 +2,24 @@ const express = require("express");
 const app = express();
 const sha256 = require("js-sha256");
 const cookieparser = require("cookie-parser");
-const multer  = require('multer')
-const upload = multer({ dest: 'uploads/' })
+const multer  = require('multer');
+const path = require('path');
+const fs = require('fs');
+// const upload = multer({ dest: 'uploads/' })
+
+var storage = multer.diskStorage(
+  {
+    destination: './uploads/',
+    filename: function (req, file, cb) {
+      cb(null, file.originalname);
+    }
+  }
+);
+
+const upload = multer({storage: storage});
+
+
+
 
 app.use(express.json());
 app.use(cookieparser());
@@ -214,6 +230,10 @@ app.post('/login', (req, resp) => {
 //   });
 // });
 
+
+
+
+
 app.post('/upload', upload.single('avatar'), function(req, res) {
   if (!req.file) {
     res.status(400).send('No files uploaded');
@@ -238,11 +258,31 @@ app.post('/upload', upload.single('avatar'), function(req, res) {
   }
 });
 
+app.get('/upload', (req, res) => {
+  const directoryPath = path.join('./uploads');
+  const output = [];
+  fs.readdir(directoryPath, function (err, files) {
+    if (err) {
+      res.sendStatus(400);
+    } else {
+      files.forEach(function (file) {
+        output.push(file);
+      });
+
+      res.json(output);
+    }
+  });
+})
+
 
 
 
 
 // listen for requests :)
-const listener = app.listen(process.env.PORT, () => {
+// const listener = app.listen(process.env.PORT, () => {
+//   console.log("Your app is listening on port " + listener.address().port);
+// });
+
+const listener = app.listen(2000, () => {
   console.log("Your app is listening on port " + listener.address().port);
 });

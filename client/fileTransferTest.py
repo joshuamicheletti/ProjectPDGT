@@ -1,7 +1,7 @@
 import requests
 
-# url = "https://projectpdgt.herokuapp.com/upload"
-url = "http://localhost:2000/upload"
+url = "https://projectpdgt.herokuapp.com/upload"
+# url = "http://localhost:2000/upload"
 
 # files = ('avatar', ('mod.jar', open('../mod.jar', 'rb')))
 files=[

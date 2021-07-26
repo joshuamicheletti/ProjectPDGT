@@ -1,11 +1,14 @@
 import requests
 
-url = "https://projectpdgt.herokuapp.com/upload"
-# url = "http://localhost:2000/upload"
+# url = "https://projectpdgt.herokuapp.com/upload"
+url = "http://localhost:2000/upload"
+
+fileName = "Xaeros_Minimap_21.10.0.3_Forge_1.16.5.jar"
+directory = "./"
 
 # files = ('avatar', ('mod.jar', open('../mod.jar', 'rb')))
 files=[
-  ('avatar',('mod.jar',open('../modsToUpload/mod.jar','rb'),'application/java-archive'))
+  ('avatar',(fileName,open(directory + fileName,'rb'),'application/java-archive'))
 ]
 
 # r = requests.post(url, files=files)

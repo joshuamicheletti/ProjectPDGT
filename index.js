@@ -261,6 +261,7 @@ app.post('/upload', upload.single('avatar'), function(req, res) {
 app.get('/upload', (req, res) => {
   const directoryPath = path.join('./uploads');
   const output = [];
+
   fs.readdir(directoryPath, function (err, files) {
     if (err) {
       res.sendStatus(400);
@@ -272,6 +273,12 @@ app.get('/upload', (req, res) => {
       res.json(output);
     }
   });
+});
+
+
+app.get('/download', (req, res) => {
+  const file = './uploads/Xaeros_Minimap_21.10.0.3_Forge_1.16.5.jar';
+  res.download(file);
 });
 
 

@@ -21,4 +21,5 @@ bin-release/
 node_modules/
 modsToUpload/
 uploads/
+*.txt
 

@@ -19,8 +19,6 @@ var storage = multer.diskStorage(
 const upload = multer({storage: storage});
 
 
-
-
 app.use(express.json());
 app.use(cookieparser());
 
@@ -172,7 +170,7 @@ function attemptAuth(req) {
 
 app.get('/secret', (req, resp) => {
   if (attemptAuth(req)) {
-    resp.status(200).send("File segretissimo").end();
+    resp.status(200).send(cookies.get(req.cookies.auth)).end();
   } else {
     resp.set('WWW-Authenticate', 'Basic realm="Cose segrete"').sendStatus(401).end();
   }
@@ -206,7 +204,7 @@ app.post('/login', (req, resp) => {
   
   resp.cookie('auth', sessionId);
   
-  resp.status(200).send("Sei autenticato!").end();
+  resp.status(200).send(username).end();
 });
 
 
@@ -277,8 +275,9 @@ app.get('/upload', (req, res) => {
 
 
 app.get('/download', (req, res) => {
-  const file = './uploads/Xaeros_Minimap_21.10.0.3_Forge_1.16.5.jar';
-  res.download(file);
+  const fileDirectory = './uploads/' + req.query.mod;
+  // const file = './uploads/Xaeros_Minimap_21.10.0.3_Forge_1.16.5.jar';
+  res.download(fileDirectory);
 });
 
 
@@ -286,10 +285,10 @@ app.get('/download', (req, res) => {
 
 
 // listen for requests :)
-const listener = app.listen(process.env.PORT, () => {
-  console.log("Your app is listening on port " + listener.address().port);
-});
-
-// const listener = app.listen(2000, () => {
+// const listener = app.listen(process.env.PORT, () => {
 //   console.log("Your app is listening on port " + listener.address().port);
 // });
+
+const listener = app.listen(2000, () => {
+  console.log("Your app is listening on port " + listener.address().port);
+});

@@ -3,8 +3,8 @@ import base64
 import re
 import os
 
-# url = "https://projectpdgt.herokuapp.com"
-url = "http://localhost:2000"
+url = "https://projectpdgt.herokuapp.com"
+# url = "http://localhost:2000"
 
 user = ""
 

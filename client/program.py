@@ -2,11 +2,34 @@ import requests
 import base64
 import re
 import os
+import keyboard
+import msvcrt
+from termcolor import colored
+from tkinter import Tk     # from tkinter import Tk for Python 3.x
+from tkinter.filedialog import askopenfilename
 
 url = "https://projectpdgt.herokuapp.com"
 # url = "http://localhost:2000"
 
 user = ""
+
+modList = []
+
+upToDate = False
+
+Tk().withdraw()
+
+selectedMod = 0
+
+selectedCommand = 0
+
+pressed = False
+
+choosingMods = False
+
+commandsLength = 4
+
+enter = False
 
 def login(username, password):
   credentials = username + ":" + password
@@ -74,6 +97,20 @@ def loginWithoutCredentials():
     return False
 
 
+def printMods():
+  global selectedMod
+
+  if not upToDate:
+    checkMods()
+  
+  print("\nMODS:")
+
+  for i in range(0, len(modList)):
+    if i == selectedMod:
+      print(colored("> ", "red"), modList[i])
+    else:
+      print("> " + modList[i])
+
 def checkMods():
   r = requests.request("GET", url + '/upload')
 
@@ -81,13 +118,31 @@ def checkMods():
   for m in re.finditer('"', r.text):
     modIndexes.append(m.start())
 
-  print("\nMODS:")
+  global modList
+  modList = []
 
   for i in range(0, len(modIndexes)):
     if i % 2 == 1:
-      print("> " + r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
+      modList.append(r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
+      # print("> " + r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
+  global upToDate
+  upToDate = True
 
-  print()
+
+def printCommands():
+  if selectedCommand == 0:
+    print(colored("Upload mod", "red"), "  ", colored("Download mod", "white"), "  ", colored("LogOut", "white"), "  ", colored("Close", "white"), "\n")
+
+  elif selectedCommand == 1:
+    print(colored("Upload mod", "white"), "  ", colored("Download mod", "red"), "  ", colored("LogOut", "white"), "  ", colored("Close", "white"), "\n")
+
+  elif selectedCommand == 2:
+    print(colored("Upload mod", "white"), "  ", colored("Download mod", "white"), "  ", colored("LogOut", "red"), "  ", colored("Close", "white"), "\n")
+
+  elif selectedCommand == 3:
+    print(colored("Upload mod", "white"), "  ", colored("Download mod", "white"), "  ", colored("LogOut", "white"), "  ", colored("Close", "red"), "\n")
+
+
 
 def uploadMod(path):
   splitString = path.split("/")
@@ -122,23 +177,64 @@ def downloadMod(modName):
     file = open(downloadPath + modName, "wb")
     file.write(r.content)
 
+def my_keyboard_hook(keyboard_event):
+    global selectedMod
+    global pressed
+    global selectedCommand
+    global enter
+    # print("Name:", keyboard_event.name)
+    # print("Scan code:", keyboard_event.scan_code)
+    # print("Time:", keyboard_event.time)
+    if keyboard_event.scan_code == 72:
+      if selectedMod > 0:
+        selectedMod -= 1
+      pressed = True
+
+    if keyboard_event.scan_code == 80:
+      if selectedMod < len(modList) - 1:
+        selectedMod += 1
+      pressed = True
+
+    if keyboard_event.scan_code == 75:
+      if selectedCommand > 0:
+        selectedCommand -= 1
+      pressed = True
+
+    if keyboard_event.scan_code == 77:
+      if selectedCommand < commandsLength - 1:
+        selectedCommand += 1
+      pressed = True
+
+    if keyboard_event.scan_code == 28:
+      enter = True
+
+
+
 
 def main():
+  os.system('cls')
   running = True
   loggedIn = False
+  keyboard.on_press(my_keyboard_hook)
 
   while running:
     if not loggedIn:
       if not loginWithoutCredentials():
+        while msvcrt.kbhit():
+          msvcrt.getch()
         command = int(input("Enter your Login Method: (1 - normal login, 2 - login with cookie, 0 - close)\n"))
 
         if command == 1:
+          while msvcrt.kbhit():
+            msvcrt.getch()
           username = input("Username: ")
           password = input("Password: ")
           if login(username, password):
             loggedIn = True
 
         elif command == 2:
+          while msvcrt.kbhit():
+            msvcrt.getch()
           username = input("Username: ")
           password = input("Password: ")
           if loginCookie(username, password):
@@ -150,30 +246,60 @@ def main():
       else:
         loggedIn = True
 
+      os.system('cls')
+
+
     else:
-      print("\nUser: " + user)
+      global enter
+      enter = False
 
-      checkMods()
+      print("User: " + user)
 
-      command = int(input("Enter your action: (1 - upload a mod, 2 - download a mod, 3 - LogOut, 0 - close)\n"))
+      printMods()
 
-      if command == 1:
-        path = input("Enter mod directory:\n")
+      print()
+
+      printCommands()
+
+      global pressed
+      while not pressed and not enter:
+        pass
+
+      pressed = False
+
+
+      if selectedCommand == 0 and enter == True:
+        enter = False
+        # path = input("Enter mod directory:\n")
+        path = askopenfilename()
         uploadMod(path)
+        global upToDate
+        upToDate = False
 
-      elif command == 2:
+      elif selectedCommand == 1 and enter == True:
+        enter = False
+        while msvcrt.kbhit():
+          msvcrt.getch()
         modName = input("Enter the mod you want to download:\n")
         downloadMod(modName)
+        
 
-      elif command == 3:
+      elif selectedCommand == 2 and enter == True:
+        enter = False
         loggedIn = False
         try:
           os.remove("cookie.txt")
         except IOError:
           print("No cookie to remove")
+        
 
-      elif command == 0:
+      elif selectedCommand == 3 and enter == True:
+        enter = False
         running = False
+        
+      
+
+      os.system('cls')
 
 
 main()

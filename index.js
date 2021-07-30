@@ -5,6 +5,7 @@ const cookieparser = require("cookie-parser");
 const multer  = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { resolvePtr } = require("dns");
 // const upload = multer({ dest: 'uploads/' })
 
 var storage = multer.diskStorage(
@@ -27,6 +28,8 @@ data.set(1, {name: "Mario", surname: "Rossi"});
 data.set(2, {name: "Luigi", surname: "Verdi"});
 
 var dataID = 2;
+
+var saltCounter = 0;
 
 app.get('/people', (req, resp) => {
   if (!req.accepts('application/json')) {
@@ -170,7 +173,15 @@ function attemptAuth(req) {
 
 app.get('/secret', (req, resp) => {
   if (attemptAuth(req)) {
-    resp.status(200).send(cookies.get(req.cookies.auth)).end();
+    if (req.headers.authorization) {
+      const auth = req.headers.authorization.substr(6);
+      const decoded = new Buffer(auth, 'base64').toString()
+      const [login, password] = decoded.split(':');
+      resp.status(200).send(login).end();
+    } else {
+      resp.status(200).send(cookies.get(req.cookies.auth)).end();
+    }
+    
   } else {
     resp.set('WWW-Authenticate', 'Basic realm="Cose segrete"').sendStatus(401).end();
   }
@@ -205,6 +216,31 @@ app.post('/login', (req, resp) => {
   resp.cookie('auth', sessionId);
   
   resp.status(200).send(username).end();
+});
+
+app.post('/register', (req, resp) => {
+  if (req.headers.authorization) {
+    const auth = req.headers.authorization.substr(6);
+    const decoded = new Buffer(auth, 'base64').toString();
+    const [user, password] = decoded.split(':');
+    console.log("Register: " + user + ", password: " + password);
+  
+    const compound = saltCounter.toString() + password;
+
+    const h = sha256.create();
+    h.update(compound);
+
+    logins.set(user, {salt: saltCounter.toString(), hash: h.hex()});
+    console.log(h.hex(), saltCounter);
+    saltCounter++;
+
+    resp.status(200).send(user);
+
+  } else {
+    resp.status(400).end();
+  }
+
+
 });
 
 

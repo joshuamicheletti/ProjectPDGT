@@ -4,6 +4,7 @@ import re
 import os
 import keyboard
 import msvcrt
+import sys
 from termcolor import colored
 from tkinter import Tk     # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
@@ -25,9 +26,11 @@ selectedCommand = 0
 
 pressed = False
 
-choosingMods = False
-
 commandsLength = 4
+
+selectedLoginCommand = 0
+
+loginCommandLength = 4
 
 enter = False
 
@@ -93,8 +96,27 @@ def loginWithoutCredentials():
       return False
 
   except IOError:
-    print("No cookie found")
     return False
+
+def register(username, password):
+  credentials = username + ":" + password
+  credentials_bytes = credentials.encode('ascii')
+  base64_bytes = base64.b64encode(credentials_bytes)
+  base64_message = base64_bytes.decode('ascii')
+
+  headers = {
+    'Authorization': 'Basic ' + base64_message
+  }
+
+  r = requests.post(url + '/register', headers = headers)
+
+  if r.status_code == 200:
+    global user
+    user = username
+    return True
+  else:
+    return False
+
 
 
 def printMods():
@@ -142,6 +164,16 @@ def printCommands():
   elif selectedCommand == 3:
     print(colored("Upload mod", "white"), "  ", colored("Download mod", "white"), "  ", colored("LogOut", "white"), "  ", colored("Close", "red"), "\n")
 
+def printLoginCommands():
+  if selectedLoginCommand == 0:
+    print(colored("Login", "red"), "  ", colored("Login with Cookie", "white"), "  ", colored("Register", "white"), "  ", colored("Close", "white"), "\n")
+  elif selectedLoginCommand == 1:
+    print(colored("Login", "white"), "  ", colored("Login with Cookie", "red"), "  ", colored("Register", "white"), "  ", colored("Close", "white"), "\n")
+  elif selectedLoginCommand == 2:
+    print(colored("Login", "white"), "  ", colored("Login with Cookie", "white"), "  ", colored("Register", "red"), "  ", colored("Close", "white"), "\n")
+  elif selectedLoginCommand == 3:
+    print(colored("Login", "white"), "  ", colored("Login with Cookie", "white"), "  ", colored("Register", "white"), "  ", colored("Close", "red"), "\n")
+
 
 
 def uploadMod(path):
@@ -182,75 +214,97 @@ def my_keyboard_hook(keyboard_event):
     global pressed
     global selectedCommand
     global enter
+    global selectedLoginCommand
     # print("Name:", keyboard_event.name)
     # print("Scan code:", keyboard_event.scan_code)
     # print("Time:", keyboard_event.time)
-    if keyboard_event.scan_code == 72:
-      if selectedMod > 0:
-        selectedMod -= 1
-      pressed = True
+    if pressed == False:
+      if keyboard_event.scan_code == 72: #up
+        if selectedMod > 0:
+          selectedMod -= 1
+        pressed = True
 
-    if keyboard_event.scan_code == 80:
-      if selectedMod < len(modList) - 1:
-        selectedMod += 1
-      pressed = True
+      if keyboard_event.scan_code == 80: #down
+        if selectedMod < len(modList) - 1:
+          selectedMod += 1
+        pressed = True
 
-    if keyboard_event.scan_code == 75:
-      if selectedCommand > 0:
-        selectedCommand -= 1
-      pressed = True
+      if keyboard_event.scan_code == 75: #left
+        if selectedCommand > 0:
+          selectedCommand -= 1
 
-    if keyboard_event.scan_code == 77:
-      if selectedCommand < commandsLength - 1:
-        selectedCommand += 1
-      pressed = True
+        if selectedLoginCommand > 0:
+          selectedLoginCommand -= 1
+        pressed = True
 
-    if keyboard_event.scan_code == 28:
-      enter = True
+      if keyboard_event.scan_code == 77: #right
+        if selectedCommand < commandsLength - 1:
+          selectedCommand += 1
 
+        if selectedLoginCommand < loginCommandLength - 1:
+          selectedLoginCommand += 1
+        pressed = True
 
+      if keyboard_event.scan_code == 28:
+        enter = True
+        pressed = True
 
 
 def main():
   os.system('cls')
+  global enter
+  global pressed
+
   running = True
   loggedIn = False
   keyboard.on_press(my_keyboard_hook)
 
+  if loginWithoutCredentials():
+    loggedIn = True
+
   while running:
     if not loggedIn:
-      if not loginWithoutCredentials():
+
+      printLoginCommands()
+      
+      while not pressed and not enter:
+        pass
+      pressed = False
+
+      if selectedLoginCommand == 0 and enter == True:
         while msvcrt.kbhit():
           msvcrt.getch()
-        command = int(input("Enter your Login Method: (1 - normal login, 2 - login with cookie, 0 - close)\n"))
 
-        if command == 1:
-          while msvcrt.kbhit():
-            msvcrt.getch()
-          username = input("Username: ")
-          password = input("Password: ")
-          if login(username, password):
-            loggedIn = True
+        sys.stdin.flush()
+        username = input("Username: ")
+        password = input("Password: ")
+        if login(username, password):
+          loggedIn = True
 
-        elif command == 2:
-          while msvcrt.kbhit():
-            msvcrt.getch()
-          username = input("Username: ")
-          password = input("Password: ")
-          if loginCookie(username, password):
-            loggedIn = True
-          
-        elif command == 0:
-          running = False
+      elif selectedLoginCommand == 1 and enter == True:
+        while msvcrt.kbhit():
+          msvcrt.getch()
+        username = input("Username: ")
+        password = input("Password: ")
+        if loginCookie(username, password):
+          loggedIn = True
 
-      else:
-        loggedIn = True
+      elif selectedLoginCommand == 2 and enter == True:
+        while msvcrt.kbhit():
+          msvcrt.getch()
+        username = input("Username: ")
+        password = input("Password: ")
+        if register(username, password):
+          loggedIn = True
+        
+      elif selectedLoginCommand == 3 and enter == True:
+        running = False
 
       os.system('cls')
 
 
     else:
-      global enter
+      
       enter = False
 
       print("User: " + user)
@@ -261,7 +315,7 @@ def main():
 
       printCommands()
 
-      global pressed
+      
       while not pressed and not enter:
         pass
 
@@ -278,10 +332,7 @@ def main():
 
       elif selectedCommand == 1 and enter == True:
         enter = False
-        while msvcrt.kbhit():
-          msvcrt.getch()
-        modName = input("Enter the mod you want to download:\n")
-        downloadMod(modName)
+        downloadMod(modList[selectedMod])
         
 
       elif selectedCommand == 2 and enter == True:

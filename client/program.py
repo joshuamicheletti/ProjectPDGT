@@ -26,15 +26,21 @@ selectedCommand = 0
 
 pressed = False
 
-commandsLength = 4
-
 selectedLoginCommand = 0
-
-loginCommandLength = 4
 
 enter = False
 
+serverMessage = ""
+
+loginCommands = ["Login", "Login with Cookie", "Register", "Delete", "Close"]
+
+commands = ["Upload Mod", "Download Mod", "LogOut", "Close"]
+
+
 def login(username, password):
+  global user
+  global serverMessage
+
   credentials = username + ":" + password
   credentials_bytes = credentials.encode('ascii')
   base64_bytes = base64.b64encode(credentials_bytes)
@@ -44,41 +50,43 @@ def login(username, password):
     'Authorization': 'Basic ' + base64_message
   }
 
-  x = requests.get(url + '/secret', headers = headers)
+  r = requests.get(url + '/secret', headers = headers)
 
-  if int(x.status_code) == 200:
-    global user
-    user = x.text
+  if r.status_code == 200:
+    user = r.text
+    serverMessage = ""
     return True
     
   else:
-    print(x.status_code)
-    print(x.text)
+    serverMessage = r.text
     return False
 
 def loginCookie(username, password):
-  x = requests.post(url + '/login?username=' + username + '&password=' + password)
+  global user
+  global serverMessage
 
-  try:
-    cookieFile = open("cookie.txt", "x")
-    cookieFile.write(x.cookies["auth"])
-    cookieFile.close()
-  except IOError:
-    cookieFile = open("cookie.txt", "w")
-    cookieFile.write(x.cookies["auth"])
-    cookieFile.close()
+  r = requests.post(url + '/login?username=' + username + '&password=' + password)
 
-  if int(x.status_code) == 200:
-    global user
-    user = x.text
+  if r.status_code == 200:
+    user = r.text
+    try:
+      cookieFile = open("cookie.txt", "x")
+      cookieFile.write(r.cookies["auth"])
+      cookieFile.close()
+    except IOError:
+      cookieFile = open("cookie.txt", "w")
+      cookieFile.write(r.cookies["auth"])
+      cookieFile.close()
+
+    serverMessage = ""
     return True
     
   else:
-    print(x.status_code)
-    print(x.text)
+    serverMessage = r.text
     return False
 
 def loginWithoutCredentials():
+  global user
   try:
     cookieFile = open("cookie.txt", "r")
     headers = {
@@ -88,7 +96,6 @@ def loginWithoutCredentials():
     x = requests.get(url + '/secret', headers = headers)
     
     if int(x.status_code) == 200:
-      global user
       user = x.text
       return True 
       
@@ -99,6 +106,9 @@ def loginWithoutCredentials():
     return False
 
 def register(username, password):
+  global serverMessage
+  global user
+
   credentials = username + ":" + password
   credentials_bytes = credentials.encode('ascii')
   base64_bytes = base64.b64encode(credentials_bytes)
@@ -111,12 +121,33 @@ def register(username, password):
   r = requests.post(url + '/register', headers = headers)
 
   if r.status_code == 200:
-    global user
-    user = username
+    user = r.text
+    serverMessage = ""
     return True
   else:
+    serverMessage = r.text
     return False
 
+def deleteUser(username, password):
+  global serverMessage
+
+  credentials = username + ":" + password
+  credentials_bytes = credentials.encode('ascii')
+  base64_bytes = base64.b64encode(credentials_bytes)
+  base64_message = base64_bytes.decode('ascii')
+
+  headers = {
+    'Authorization': 'Basic ' + base64_message
+  }
+
+  r = requests.delete(url + '/users', headers = headers)
+
+  if r.status_code == 200:
+    serverMessage = r.text
+    return True
+  else:
+    serverMessage = r.text
+    return False
 
 
 def printMods():
@@ -152,27 +183,28 @@ def checkMods():
 
 
 def printCommands():
-  if selectedCommand == 0:
-    print(colored("Upload mod", "red"), "  ", colored("Download mod", "white"), "  ", colored("LogOut", "white"), "  ", colored("Close", "white"), "\n")
+  for i in range(len(commands)):
+    if i == selectedCommand:
+      color = "red"
+    else:
+      color = "white"
 
-  elif selectedCommand == 1:
-    print(colored("Upload mod", "white"), "  ", colored("Download mod", "red"), "  ", colored("LogOut", "white"), "  ", colored("Close", "white"), "\n")
-
-  elif selectedCommand == 2:
-    print(colored("Upload mod", "white"), "  ", colored("Download mod", "white"), "  ", colored("LogOut", "red"), "  ", colored("Close", "white"), "\n")
-
-  elif selectedCommand == 3:
-    print(colored("Upload mod", "white"), "  ", colored("Download mod", "white"), "  ", colored("LogOut", "white"), "  ", colored("Close", "red"), "\n")
+    if i == len(commands) - 1:
+      print(colored(commands[i], color))
+    else:
+      print(colored(commands[i], color), "  ", end = '', flush = True)
 
 def printLoginCommands():
-  if selectedLoginCommand == 0:
-    print(colored("Login", "red"), "  ", colored("Login with Cookie", "white"), "  ", colored("Register", "white"), "  ", colored("Close", "white"), "\n")
-  elif selectedLoginCommand == 1:
-    print(colored("Login", "white"), "  ", colored("Login with Cookie", "red"), "  ", colored("Register", "white"), "  ", colored("Close", "white"), "\n")
-  elif selectedLoginCommand == 2:
-    print(colored("Login", "white"), "  ", colored("Login with Cookie", "white"), "  ", colored("Register", "red"), "  ", colored("Close", "white"), "\n")
-  elif selectedLoginCommand == 3:
-    print(colored("Login", "white"), "  ", colored("Login with Cookie", "white"), "  ", colored("Register", "white"), "  ", colored("Close", "red"), "\n")
+  for i in range(len(loginCommands)):
+    if i == selectedLoginCommand:
+      color = "red"
+    else:
+      color = "white"
+
+    if i == len(loginCommands) - 1:
+      print(colored(loginCommands[i], color))
+    else:
+      print(colored(loginCommands[i], color), "  ", end = '', flush = True)
 
 
 
@@ -215,6 +247,7 @@ def my_keyboard_hook(keyboard_event):
     global selectedCommand
     global enter
     global selectedLoginCommand
+    global loginCommands
     # print("Name:", keyboard_event.name)
     # print("Scan code:", keyboard_event.scan_code)
     # print("Time:", keyboard_event.time)
@@ -238,10 +271,10 @@ def my_keyboard_hook(keyboard_event):
         pressed = True
 
       if keyboard_event.scan_code == 77: #right
-        if selectedCommand < commandsLength - 1:
+        if selectedCommand < len(commands) - 1:
           selectedCommand += 1
 
-        if selectedLoginCommand < loginCommandLength - 1:
+        if selectedLoginCommand < len(loginCommands) - 1:
           selectedLoginCommand += 1
         pressed = True
 
@@ -254,6 +287,7 @@ def main():
   os.system('cls')
   global enter
   global pressed
+  global serverMessage
 
   running = True
   loggedIn = False
@@ -263,6 +297,9 @@ def main():
     loggedIn = True
 
   while running:
+    if (serverMessage != ""):
+      print(serverMessage + "\n")
+
     if not loggedIn:
 
       printLoginCommands()
@@ -280,6 +317,8 @@ def main():
         password = input("Password: ")
         if login(username, password):
           loggedIn = True
+          serverMessage = ""
+        enter = False
 
       elif selectedLoginCommand == 1 and enter == True:
         while msvcrt.kbhit():
@@ -288,6 +327,8 @@ def main():
         password = input("Password: ")
         if loginCookie(username, password):
           loggedIn = True
+          serverMessage = ""
+        enter = False
 
       elif selectedLoginCommand == 2 and enter == True:
         while msvcrt.kbhit():
@@ -296,8 +337,18 @@ def main():
         password = input("Password: ")
         if register(username, password):
           loggedIn = True
+          serverMessage = ""
+        enter = False
         
       elif selectedLoginCommand == 3 and enter == True:
+        while msvcrt.kbhit():
+          msvcrt.getch()
+        username = input("Username: ")
+        password = input("Password: ")
+        deleteUser(username, password)
+        enter = False
+
+      elif selectedLoginCommand == 4 and enter == True:
         running = False
 
       os.system('cls')

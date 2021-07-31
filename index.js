@@ -183,7 +183,7 @@ app.get('/secret', (req, resp) => {
     }
     
   } else {
-    resp.set('WWW-Authenticate', 'Basic realm="Cose segrete"').sendStatus(401).end();
+    resp.set('WWW-Authenticate', 'Basic realm="Cose segrete"').status(401).send("Wrong Username or Password").end();
   }
 });
 
@@ -201,7 +201,7 @@ app.post('/login', (req, resp) => {
   const password = req.query.password;
   
   if (!attemptLogin(username, password)) {
-    resp.sendStatus(403).end();
+    resp.status(403).send("Wrong Username or Password").end();
     return;
   }
   
@@ -219,54 +219,73 @@ app.post('/login', (req, resp) => {
 });
 
 app.post('/register', (req, resp) => {
-  if (req.headers.authorization) {
-    const auth = req.headers.authorization.substr(6);
-    const decoded = new Buffer(auth, 'base64').toString();
-    const [user, password] = decoded.split(':');
-    console.log("Register: " + user + ", password: " + password);
-  
-    const compound = saltCounter.toString() + password;
-
-    const h = sha256.create();
-    h.update(compound);
-
-    logins.set(user, {salt: saltCounter.toString(), hash: h.hex()});
-    console.log(h.hex(), saltCounter);
-    saltCounter++;
-
-    resp.status(200).send(user);
-
-  } else {
-    resp.status(400).end();
+  if (!req.headers.authorization) {
+    resp.status(400).send("Invalid Registration").end();
+    return;
   }
 
+  const auth = req.headers.authorization.substr(6);
+  const decoded = new Buffer(auth, 'base64').toString();
+  const [user, password] = decoded.split(':');
+  console.log("Register: " + user + ", password: " + password);
 
+  if (user.length == 0) {
+    resp.status(400).send("Invalid User").end();
+    return;
+  }
+
+  if (password.length == 0) {
+    resp.status(400).send("Invalid Password").end();
+    return;
+  }
+
+  if (logins.has(user)) {
+    console.log("User " + user + " already exists");
+    resp.status(400).send("User already registered").end();
+    return;
+  }
+
+  const compound = saltCounter.toString() + password;
+
+  const h = sha256.create();
+  h.update(compound);
+
+  logins.set(user, {salt: saltCounter.toString(), hash: h.hex()});
+  console.log(h.hex(), saltCounter);
+  saltCounter++;
+
+  resp.status(200).send(user);
 });
 
+app.delete('/users', (req, resp) => {
+  if (!req.headers.authorization) {
+    resp.status(400).send("Not Authorized").end();
+    return;
+  }
 
+  const auth = req.headers.authorization.substr(6);
+  const decoded = new Buffer(auth, 'base64').toString();
+  const [user, password] = decoded.split(':');
 
-// app.use(fileUpload());
+  if (!logins.has(user)) {
+    resp.status(404).send("User Not Found").end();
+    return;
+  }
 
-// app.post('/upload', function(req, res) {
-//   if (!req.files || Object.keys(req.files).length === 0) {
-//     return res.status(400).send('No files were uploaded.');
-//   }
+  const compound = logins.get(user).salt + password;
 
-//   // The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
-//   let sampleFile = req.files.sampleFile;
+  const h = sha256.create();
+  h.update(compound);
 
-//   // Use the mv() method to place the file somewhere on your server
-//   sampleFile.mv('/somewhere/on/your/server/filename.jpg', function(err) {
-//     if (err)
-//       return res.status(500).send(err);
+  if (h.hex() != logins.get(user).hash) {
+    resp.status(403).send("Wrong password").end();
+    return;
+  }
 
-//     res.send('File uploaded!');
-//   });
-// });
+  logins.delete(user);
 
-
-
-
+  resp.status(200).send("Deleted user: " + user).end();
+});
 
 app.post('/upload', upload.single('avatar'), function(req, res) {
   if (!req.file) {
@@ -315,8 +334,6 @@ app.get('/download', (req, res) => {
   // const file = './uploads/Xaeros_Minimap_21.10.0.3_Forge_1.16.5.jar';
   res.download(fileDirectory);
 });
-
-
 
 
 

@@ -5,6 +5,7 @@ import os
 import keyboard
 import msvcrt
 import sys
+import stdiomask
 from termcolor import colored
 from tkinter import Tk     # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
@@ -313,8 +314,9 @@ def main():
           msvcrt.getch()
 
         sys.stdin.flush()
-        username = input("Username: ")
-        password = input("Password: ")
+        username = input("\nUsername: ")
+        print()
+        password = stdiomask.getpass(mask='*')
         if login(username, password):
           loggedIn = True
           serverMessage = ""
@@ -323,8 +325,9 @@ def main():
       elif selectedLoginCommand == 1 and enter == True:
         while msvcrt.kbhit():
           msvcrt.getch()
-        username = input("Username: ")
-        password = input("Password: ")
+        username = input("\nUsername: ")
+        print()
+        password = stdiomask.getpass(mask='*')
         if loginCookie(username, password):
           loggedIn = True
           serverMessage = ""
@@ -333,8 +336,9 @@ def main():
       elif selectedLoginCommand == 2 and enter == True:
         while msvcrt.kbhit():
           msvcrt.getch()
-        username = input("Username: ")
-        password = input("Password: ")
+        username = input("\nUsername: ")
+        print()
+        password = stdiomask.getpass(mask='*')
         if register(username, password):
           loggedIn = True
           serverMessage = ""
@@ -343,8 +347,9 @@ def main():
       elif selectedLoginCommand == 3 and enter == True:
         while msvcrt.kbhit():
           msvcrt.getch()
-        username = input("Username: ")
-        password = input("Password: ")
+        username = input("\nUsername: ")
+        print()
+        password = stdiomask.getpass(mask='*')
         deleteUser(username, password)
         enter = False
 

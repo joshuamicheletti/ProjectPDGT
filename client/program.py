@@ -512,7 +512,7 @@ def main():
             serverLoggedIn = True
             upToDateServer = False
 
-        if selectedServer == len(serverList) + 1:
+        elif selectedServer == len(serverList) + 1:
           enter = False
           loggedIn = False
 

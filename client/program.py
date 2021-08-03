@@ -15,6 +15,8 @@ url = "https://projectpdgt.herokuapp.com"
 
 user = ""
 
+serverCurrent = ""
+
 modList = []
 
 serverList = []
@@ -22,6 +24,8 @@ serverList = []
 selectedServer = 0
 
 upToDate = False
+
+upToDateServer = False
 
 Tk().withdraw()
 
@@ -39,7 +43,7 @@ serverMessage = ""
 
 loginCommands = ["Login", "Login with Cookie", "Register", "Delete", "Close"]
 
-commands = ["Upload Mod", "Download Mod", "LogOut", "Close"]
+commands = ["Upload Mod", "Download Mod", "Change Server", "Logout", "Close"]
 
 username = ""
 password = ""
@@ -160,6 +164,7 @@ def deleteUser(username, password):
 
 def printMods():
   global selectedMod
+  global upToDate
 
   if not upToDate:
     checkMods()
@@ -218,23 +223,32 @@ def printLoginCommands():
 def printServers():
   global serverList
   global selectedServer
+  global upToDateServer
   print("\nSERVERS: ")
 
-  checkServers()
+  if not upToDateServer:
+    checkServers()
 
   if selectedServer == 0:
-    print(colored("> ", "green"), colored("New Server", "green"))
+    print(colored("> ", "green"), colored("New Server\n", "green"))
   else:
-    print("> New Server")
+    print("> New Server\n")
 
   for i in range(0, len(serverList)):
     if i + 1 == selectedServer:
       print(colored("> ", "red"), serverList[i])
     else:
       print("> " + serverList[i])
+
+  if selectedServer == len(serverList) + 1:
+    print(colored("\n>  Logout", "red"))
+  else:
+    print("\n> Logout")
   
 def checkServers():
   global serverList
+  global upToDateServer
+
   r = requests.get(url + "/servers")
 
   if r.status_code == 200:
@@ -247,10 +261,14 @@ def checkServers():
       if i % 2 == 1:
         serverList.append(r.text[serverIndexes[i - 1] + 1 : serverIndexes[i]])
 
+  upToDateServer = True
+
 def createServer(serverName, serverPassword):
   global serverMessage
   global username
   global password
+  global upToDateServer
+  global serverCurrent
 
   try:
     cookieFile = open("cookie.txt", "r")
@@ -261,7 +279,7 @@ def createServer(serverName, serverPassword):
     r = requests.post(url + "/servers" + "?serverName=" + serverName + "&serverPassword=" + serverPassword, headers = headers)
 
     if r.status_code == 200:
-      serverMessage = r.text
+      serverCurrent = r.text
       return True
     else:
       serverMessage = r.text
@@ -281,6 +299,7 @@ def createServer(serverName, serverPassword):
 
     if r.status_code == 200:
       serverMessage = r.text
+      upToDateServer = False
       return True
     else:
       serverMessage = r.text
@@ -289,11 +308,12 @@ def createServer(serverName, serverPassword):
 def loginServer(serverPassword):
   global serverList
   global serverMessage
+  global serverCurrent
 
   r = requests.get(url + "/servers" + "?serverName=" + serverList[selectedServer - 1] + "&serverPassword=" + serverPassword)
 
   if r.status_code == 200:
-    serverMessage = r.text
+    serverCurrent = r.text
     return True
   else:
     serverMessage = r.text
@@ -357,7 +377,7 @@ def my_keyboard_hook(keyboard_event):
         if selectedMod < len(modList) - 1:
           selectedMod += 1
 
-        if selectedServer < len(serverList):
+        if selectedServer < len(serverList) + 1:
           selectedServer += 1
         pressed = True
 
@@ -389,6 +409,9 @@ def main():
   global serverMessage
   global username
   global password
+  global upToDateServer
+  global serverCurrent
+  global upToDate
 
   running = True
   loggedIn = False
@@ -407,6 +430,8 @@ def main():
     if not loggedIn:
 
       printLoginCommands()
+
+      serverMessage = ""
       
       while not pressed and not enter:
         pass
@@ -421,7 +446,7 @@ def main():
         password = stdiomask.getpass(mask='*')
         if login(username, password):
           loggedIn = True
-          serverMessage = ""
+          
         enter = False
 
       elif selectedLoginCommand == 1 and enter == True:
@@ -433,7 +458,6 @@ def main():
         password = stdiomask.getpass(mask='*')
         if loginCookie(username, password):
           loggedIn = True
-          serverMessage = ""
         enter = False
 
       elif selectedLoginCommand == 2 and enter == True:
@@ -445,7 +469,6 @@ def main():
         password = stdiomask.getpass(mask='*')
         if register(username, password):
           loggedIn = True
-          serverMessage = ""
         enter = False
         
       elif selectedLoginCommand == 3 and enter == True:
@@ -470,6 +493,8 @@ def main():
 
       printServers()
 
+      serverMessage = ""
+
       while not pressed and not enter:
         pass
       pressed = False
@@ -479,16 +504,29 @@ def main():
           while msvcrt.kbhit():
             msvcrt.getch()
           sys.stdin.flush()
-          serverName = input("Server Name: ")
+          serverName = input("\nServer Name: ")
+          print()
           serverPassword = stdiomask.getpass(mask='*')
           if createServer(serverName, serverPassword):
             enter = False
             serverLoggedIn = True
+            upToDateServer = False
+
+        if selectedServer == len(serverList) + 1:
+          enter = False
+          loggedIn = False
+
+          try:
+            os.remove("cookie.txt")
+          except IOError:
+            print("No cookie to remove")
+
 
         else:
           while msvcrt.kbhit():
             msvcrt.getch()
           sys.stdin.flush()
+          print()
           serverPassword = stdiomask.getpass(mask='*')
           if loginServer(serverPassword):
             enter = False
@@ -504,33 +542,37 @@ def main():
 
       print("User: " + user)
 
+      print("\nServer: " + serverCurrent)
+
       printMods()
 
       print()
 
       printCommands()
 
+      serverMessage = ""
+
       
       while not pressed and not enter:
         pass
-
       pressed = False
 
 
       if selectedCommand == 0 and enter == True:
         enter = False
-        # path = input("Enter mod directory:\n")
         path = askopenfilename()
         uploadMod(path)
-        global upToDate
         upToDate = False
 
       elif selectedCommand == 1 and enter == True:
         enter = False
         downloadMod(modList[selectedMod])
-        
 
       elif selectedCommand == 2 and enter == True:
+        enter = False
+        serverLoggedIn = False
+        
+      elif selectedCommand == 3 and enter == True:
         enter = False
         loggedIn = False
         serverLoggedIn = False
@@ -539,13 +581,10 @@ def main():
         except IOError:
           print("No cookie to remove")
         
-
-      elif selectedCommand == 3 and enter == True:
+      elif selectedCommand == 4 and enter == True:
         enter = False
         running = False
         
-      
-
       os.system('cls')
 
 

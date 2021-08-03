@@ -360,7 +360,7 @@ app.get('/servers', (req, resp) => {
     return;
   }
 
-  resp.status(200).send("Connected to server: " + req.query.serverName).end();
+  resp.status(200).send(req.query.serverName).end();
 });
 
 app.post('/servers', (req, resp) => {
@@ -392,8 +392,9 @@ app.post('/servers', (req, resp) => {
 
   h.update(saltCounter.toString() + serverPassword);
   servers.set(serverName, {salt: saltCounter.toString(), hash: h.hex()}, {owner: username});
+  saltCounter++;
 
-  resp.status(200).send("Server " + serverName + " created");
+  resp.status(200).send(serverName).end();
 });
 
 

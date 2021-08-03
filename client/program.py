@@ -17,6 +17,10 @@ user = ""
 
 modList = []
 
+serverList = []
+
+selectedServer = 0
+
 upToDate = False
 
 Tk().withdraw()
@@ -36,6 +40,9 @@ serverMessage = ""
 loginCommands = ["Login", "Login with Cookie", "Register", "Delete", "Close"]
 
 commands = ["Upload Mod", "Download Mod", "LogOut", "Close"]
+
+username = ""
+password = ""
 
 
 def login(username, password):
@@ -208,6 +215,90 @@ def printLoginCommands():
       print(colored(loginCommands[i], color), "  ", end = '', flush = True)
 
 
+def printServers():
+  global serverList
+  global selectedServer
+  print("\nSERVERS: ")
+
+  checkServers()
+
+  if selectedServer == 0:
+    print(colored("> ", "green"), colored("New Server", "green"))
+  else:
+    print("> New Server")
+
+  for i in range(0, len(serverList)):
+    if i + 1 == selectedServer:
+      print(colored("> ", "red"), serverList[i])
+    else:
+      print("> " + serverList[i])
+  
+def checkServers():
+  global serverList
+  r = requests.get(url + "/servers")
+
+  if r.status_code == 200:
+    serverList = []
+    serverIndexes = []
+    for m in re.finditer('"', r.text):
+      serverIndexes.append(m.start())
+
+    for i in range(0, len(serverIndexes)):
+      if i % 2 == 1:
+        serverList.append(r.text[serverIndexes[i - 1] + 1 : serverIndexes[i]])
+
+def createServer(serverName, serverPassword):
+  global serverMessage
+  global username
+  global password
+
+  try:
+    cookieFile = open("cookie.txt", "r")
+    headers = {
+      'Cookie': 'auth=' + cookieFile.read()
+    }
+    cookieFile.close()
+    r = requests.post(url + "/servers" + "?serverName=" + serverName + "&serverPassword=" + serverPassword, headers = headers)
+
+    if r.status_code == 200:
+      serverMessage = r.text
+      return True
+    else:
+      serverMessage = r.text
+      return False
+
+  except IOError:
+    credentials = username + ":" + password
+    credentials_bytes = credentials.encode('ascii')
+    base64_bytes = base64.b64encode(credentials_bytes)
+    base64_message = base64_bytes.decode('ascii')
+
+    headers = {
+      'Authorization': 'Basic ' + base64_message
+    }
+
+    r = requests.post(url + "/servers" + "?serverName=" + serverName + "?serverPassword=" + serverPassword, headers = headers)
+
+    if r.status_code == 200:
+      serverMessage = r.text
+      return True
+    else:
+      serverMessage = r.text
+      return False
+
+def loginServer(serverPassword):
+  global serverList
+  global serverMessage
+
+  r = requests.get(url + "/servers" + "?serverName=" + serverList[selectedServer - 1] + "&serverPassword=" + serverPassword)
+
+  if r.status_code == 200:
+    serverMessage = r.text
+    return True
+  else:
+    serverMessage = r.text
+    return False
+
 
 def uploadMod(path):
   splitString = path.split("/")
@@ -249,6 +340,7 @@ def my_keyboard_hook(keyboard_event):
     global enter
     global selectedLoginCommand
     global loginCommands
+    global selectedServer
     # print("Name:", keyboard_event.name)
     # print("Scan code:", keyboard_event.scan_code)
     # print("Time:", keyboard_event.time)
@@ -256,11 +348,17 @@ def my_keyboard_hook(keyboard_event):
       if keyboard_event.scan_code == 72: #up
         if selectedMod > 0:
           selectedMod -= 1
+
+        if selectedServer > 0:
+          selectedServer -= 1
         pressed = True
 
       if keyboard_event.scan_code == 80: #down
         if selectedMod < len(modList) - 1:
           selectedMod += 1
+
+        if selectedServer < len(serverList):
+          selectedServer += 1
         pressed = True
 
       if keyboard_event.scan_code == 75: #left
@@ -289,9 +387,12 @@ def main():
   global enter
   global pressed
   global serverMessage
+  global username
+  global password
 
   running = True
   loggedIn = False
+  serverLoggedIn = False
   keyboard.on_press(my_keyboard_hook)
 
   if loginWithoutCredentials():
@@ -300,6 +401,8 @@ def main():
   while running:
     if (serverMessage != ""):
       print(serverMessage + "\n")
+
+    # LOGIN
 
     if not loggedIn:
 
@@ -312,7 +415,6 @@ def main():
       if selectedLoginCommand == 0 and enter == True:
         while msvcrt.kbhit():
           msvcrt.getch()
-
         sys.stdin.flush()
         username = input("\nUsername: ")
         print()
@@ -325,6 +427,7 @@ def main():
       elif selectedLoginCommand == 1 and enter == True:
         while msvcrt.kbhit():
           msvcrt.getch()
+        sys.stdin.flush()
         username = input("\nUsername: ")
         print()
         password = stdiomask.getpass(mask='*')
@@ -336,6 +439,7 @@ def main():
       elif selectedLoginCommand == 2 and enter == True:
         while msvcrt.kbhit():
           msvcrt.getch()
+        sys.stdin.flush()
         username = input("\nUsername: ")
         print()
         password = stdiomask.getpass(mask='*')
@@ -347,6 +451,7 @@ def main():
       elif selectedLoginCommand == 3 and enter == True:
         while msvcrt.kbhit():
           msvcrt.getch()
+        sys.stdin.flush()
         username = input("\nUsername: ")
         print()
         password = stdiomask.getpass(mask='*')
@@ -358,6 +463,40 @@ def main():
 
       os.system('cls')
 
+    # SERVER LOGIN
+
+    elif not serverLoggedIn:
+      print("User: " + user)
+
+      printServers()
+
+      while not pressed and not enter:
+        pass
+      pressed = False
+      
+      if enter == True:
+        if selectedServer == 0:
+          while msvcrt.kbhit():
+            msvcrt.getch()
+          sys.stdin.flush()
+          serverName = input("Server Name: ")
+          serverPassword = stdiomask.getpass(mask='*')
+          if createServer(serverName, serverPassword):
+            enter = False
+            serverLoggedIn = True
+
+        else:
+          while msvcrt.kbhit():
+            msvcrt.getch()
+          sys.stdin.flush()
+          serverPassword = stdiomask.getpass(mask='*')
+          if loginServer(serverPassword):
+            enter = False
+            serverLoggedIn = True
+
+      os.system('cls')
+
+    # MOD MANAGEMENT
 
     else:
       
@@ -394,6 +533,7 @@ def main():
       elif selectedCommand == 2 and enter == True:
         enter = False
         loggedIn = False
+        serverLoggedIn = False
         try:
           os.remove("cookie.txt")
         except IOError:

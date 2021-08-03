@@ -23,103 +23,109 @@ const upload = multer({storage: storage});
 app.use(express.json());
 app.use(cookieparser());
 
-const data = new Map();
-data.set(1, {name: "Mario", surname: "Rossi"});
-data.set(2, {name: "Luigi", surname: "Verdi"});
-
-var dataID = 2;
-
 var saltCounter = 0;
+// const data = new Map();
+// data.set(1, {name: "Mario", surname: "Rossi"});
+// data.set(2, {name: "Luigi", surname: "Verdi"});
 
-app.get('/people', (req, resp) => {
-  if (!req.accepts('application/json')) {
-    resp.sendStatus(406);
-    return;
-  }
-  
-  const output = Array.from(data, ([key, value]) => {
-    return {
-      id: key,
-      name: value.name,
-      surname: value.surname
-    };
-  });
-  resp.json(output);
-});
+// var dataID = 2;
 
-app.get('/people/:id', (req, resp) => {
-  const id = Number.parseInt(req.params.id);
-  
-  if (Number.isNaN(id)) {
-    resp.sendStatus(400);
-    return;
-  }
-  if (!data.has(id)) {
-    resp.sendStatus(404);
-    return;
-  }
-  
-  const person = data.get(id);
-  
-  resp.format({
-    'text/plain': () => {
-      resp.send(person.name + ' ' + person.surname);
-    },
-    'text/html': () => {
-      resp.send('<html><body><p>Il signor <b>' + person.name + ' ' + person.surname + '</b></p></body></html>');
-    },
-    'application/json': () => {
-      //resp.send(JSON.stringify(person));
-      resp.json(person);
-    },
-    defaul: () => {
-      resp.sendStatus(406);
-    }
-  });
-});
 
-app.post('/people', (req, resp) => {
-  const input = req.body;
-  
-  if (!input.name) {
-    resp.sendStatus(422);
-    return;
-  }
-  if (!input.surname) {
-    resp.sendStatus(422);
-    return;
-  }
-  
-  const name = new String(input.name);
-  const surname = new String(input.surname);
-  
-  dataID++;
-  const newId = dataID;
-  data.set(newId, {name: name, surname: surname});
-  
-  resp.status(201).type('application/json').send(JSON.stringify({id: newId, name: name, surname: surname}));
-});
 
-app.delete('/people/:id', (req, resp) => {
-  const id = Number.parseInt(req.params.id);
+// app.get('/people', (req, resp) => {
+//   if (!req.accepts('application/json')) {
+//     resp.sendStatus(406);
+//     return;
+//   }
   
-  if (Number.isNaN(id)) {
-    resp.sendStatus(400);
-    return;
-  }
-  if (!data.has(id)) {
-    resp.sendStatus(404);
-    return;
-  }
+//   const output = Array.from(data, ([key, value]) => {
+//     return {
+//       id: key,
+//       name: value.name,
+//       surname: value.surname
+//     };
+//   });
+//   resp.json(output);
+// });
+
+// app.get('/people/:id', (req, resp) => {
+//   const id = Number.parseInt(req.params.id);
   
-  data.delete(id);
+//   if (Number.isNaN(id)) {
+//     resp.sendStatus(400);
+//     return;
+//   }
+//   if (!data.has(id)) {
+//     resp.sendStatus(404);
+//     return;
+//   }
   
-  resp.sendStatus(200);
-});
+//   const person = data.get(id);
+  
+//   resp.format({
+//     'text/plain': () => {
+//       resp.send(person.name + ' ' + person.surname);
+//     },
+//     'text/html': () => {
+//       resp.send('<html><body><p>Il signor <b>' + person.name + ' ' + person.surname + '</b></p></body></html>');
+//     },
+//     'application/json': () => {
+//       //resp.send(JSON.stringify(person));
+//       resp.json(person);
+//     },
+//     defaul: () => {
+//       resp.sendStatus(406);
+//     }
+//   });
+// });
+
+// app.post('/people', (req, resp) => {
+//   const input = req.body;
+  
+//   if (!input.name) {
+//     resp.sendStatus(422);
+//     return;
+//   }
+//   if (!input.surname) {
+//     resp.sendStatus(422);
+//     return;
+//   }
+  
+//   const name = new String(input.name);
+//   const surname = new String(input.surname);
+  
+//   dataID++;
+//   const newId = dataID;
+//   data.set(newId, {name: name, surname: surname});
+  
+//   resp.status(201).type('application/json').send(JSON.stringify({id: newId, name: name, surname: surname}));
+// });
+
+// app.delete('/people/:id', (req, resp) => {
+//   const id = Number.parseInt(req.params.id);
+  
+//   if (Number.isNaN(id)) {
+//     resp.sendStatus(400);
+//     return;
+//   }
+//   if (!data.has(id)) {
+//     resp.sendStatus(404);
+//     return;
+//   }
+  
+//   data.delete(id);
+  
+//   resp.sendStatus(200);
+// });
 
 
 const logins = new Map();
-logins.set('joshua', {salt: '123456', hash: 'aca2d6bd777ac00e4581911a87dcc8a11b5faf11e08f584513e380a01693ef38'});
+logins.set('joshua', {salt: '123456', hash: 'aca2d6bd777ac00e4581911a87dcc8a11b5faf11e08f584513e380a01693ef38'}, {admin: true});
+
+const servers = new Map();
+const h = sha256.create();
+h.update("0" + "password");
+servers.set('minecuraftu', {salt: '0', hash: h.hex()}, {owner: 'joshua'});
 
 const cookies = new Map();
 
@@ -250,7 +256,7 @@ app.post('/register', (req, resp) => {
   const h = sha256.create();
   h.update(compound);
 
-  logins.set(user, {salt: saltCounter.toString(), hash: h.hex()});
+  logins.set(user, {salt: saltCounter.toString(), hash: h.hex()}, {admin: false});
   console.log(h.hex(), saltCounter);
   saltCounter++;
 
@@ -328,11 +334,66 @@ app.get('/upload', (req, res) => {
   });
 });
 
-
 app.get('/download', (req, res) => {
   const fileDirectory = './uploads/' + req.query.mod;
   // const file = './uploads/Xaeros_Minimap_21.10.0.3_Forge_1.16.5.jar';
   res.download(fileDirectory);
+});
+
+app.get('/servers', (req, resp) => {
+  if (!req.query.serverName) {
+    resp.status(200).send(Array.from(servers.keys())).end();
+    console.log(servers);
+    return;
+  }
+
+  if (!servers.has(req.query.serverName)) {
+    resp.status(400).send("No server with that name").end();
+    return;
+  }
+
+  const h = sha256.create();
+  h.update(servers.get(req.query.serverName).salt + req.query.serverPassword);
+
+  if (h.hex() != servers.get(req.query.serverName).hash) {
+    resp.status(400).send("Incorrect Password").end();
+    return;
+  }
+
+  resp.status(200).send("Connected to server: " + req.query.serverName).end();
+});
+
+app.post('/servers', (req, resp) => {
+  if (!req.query.serverName || !req.query.serverPassword) {
+    resp.status(400).send("Invalid Server Info").end();
+    return;
+  }
+
+  serverName = req.query.serverName;
+  serverPassword = req.query.serverPassword;
+
+  if (attemptAuth(req) == false) {
+    resp.status(400).send("Invalid User Login").end();
+    return;
+  }
+
+  var username;
+
+  if (req.cookies.auth) {
+    username = cookies.get(req.cookies.auth);
+  } else if (req.headers.authorization) {
+    const auth = req.headers.authorization.substr(6);
+    const decoded = new Buffer(auth, 'base64').toString()
+    const [login, password] = decoded.split(':');
+    username = login;
+  }
+
+  const h = sha256.create();
+
+  h.update(saltCounter.toString() + serverPassword);
+  servers.set(serverName, {salt: saltCounter.toString(), hash: h.hex()}, {owner: username});
+
+  resp.status(200).send("Server " + serverName + " created");
 });
 
 

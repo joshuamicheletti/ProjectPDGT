@@ -10,12 +10,18 @@ const { resolvePtr } = require("dns");
 
 var storage = multer.diskStorage(
   {
-    destination: './uploads/',
+    destination: function (req, file, cb) {
+      // cb(null, "./uploads/" + req.query.serverName + "/");
+      console.log("test");
+      cb(null, "./uploads/");
+    },
     filename: function (req, file, cb) {
+      console.log("testone");
       cb(null, file.originalname);
     }
   }
 );
+
 
 const upload = multer({storage: storage});
 
@@ -24,6 +30,8 @@ app.use(express.json());
 app.use(cookieparser());
 
 var saltCounter = 0;
+
+{
 // const data = new Map();
 // data.set(1, {name: "Mario", surname: "Rossi"});
 // data.set(2, {name: "Luigi", surname: "Verdi"});
@@ -117,6 +125,7 @@ var saltCounter = 0;
   
 //   resp.sendStatus(200);
 // });
+}
 
 
 const logins = new Map();
@@ -125,7 +134,7 @@ logins.set('joshua', {salt: '123456', hash: 'aca2d6bd777ac00e4581911a87dcc8a11b5
 const servers = new Map();
 const h = sha256.create();
 h.update("0" + "password");
-servers.set('minecuraftu', {salt: '0', hash: h.hex()}, {owner: 'joshua'});
+servers.set('minecuraftu', {salt: '0', hash: h.hex(), owner: "joshua"});
 
 const cookies = new Map();
 
@@ -293,28 +302,54 @@ app.delete('/users', (req, resp) => {
   resp.status(200).send("Deleted user: " + user).end();
 });
 
-app.post('/upload', upload.single('avatar'), function(req, res) {
-  if (!req.file) {
-    res.status(400).send('No files uploaded');
-  } else {
-
-    var info;
-
-    info = {
-      fieldname: req.file.fieldname,
-      originalName: req.file.originalname,
-      encoding: req.file.encoding,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      destination: req.file.destination,
-      filename: req.file.filename,
-      path: req.file.path,
-      buffer: req.file.buffer
-    }
-
-
-    res.json(info);
+app.post('/upload', (req, res) => {
+  if (!req.query.serverName || !req.query.serverPassword) {
+    res.status(400).send('Invalid Server Name or Password').end();
+    return false;
   }
+
+  if (!servers.has(req.query.serverName)) {
+    res.status(400).send("No server with that name").end();
+    return false;
+  }
+
+  const h = sha256.create();
+  h.update(servers.get(req.query.serverName).salt + req.query.serverPassword);
+
+  if (h.hex() != servers.get(req.query.serverName).hash) {
+    res.status(400).send("Access Denied, wrong server password").end();
+    return false;
+  }
+
+  if (!req.headers.authorization && !req.cookies.auth) {
+    res.status(400).send("Invalid Login Info").end();
+    return false;
+  }
+
+  if (!attemptAuth(req)) {
+    res.status(400).send("Wrong login info").end();
+    return false;
+  }
+
+  if (req.cookies.auth) {
+    var username = cookies.get(req.cookies.auth);
+  } else if (req.headers.authorization) {
+    const auth = req.headers.authorization.substr(6);
+    const decoded = new Buffer(auth, 'base64').toString();
+    const [login, password] = decoded.split(':');
+    var username = login;
+  }
+
+  if (servers.get(req.query.serverName).owner != username) {
+    res.status(403).send("Not allowed to upload mods").end();
+    return false;
+  }
+
+  var _upload = upload.single('avatar');
+
+  _upload(req, res, function(err) {});
+
+  res.status(200).send("Mod succesfully uploaded").end();
 });
 
 app.get('/upload', (req, res) => {
@@ -360,7 +395,7 @@ app.get('/servers', (req, resp) => {
     return;
   }
 
-  resp.status(200).send(req.query.serverName).end();
+  resp.status(200).send(req.query.serverName + "," + servers.get(req.query.serverName).owner).end();
 });
 
 app.post('/servers', (req, resp) => {
@@ -391,7 +426,7 @@ app.post('/servers', (req, resp) => {
   const h = sha256.create();
 
   h.update(saltCounter.toString() + serverPassword);
-  servers.set(serverName, {salt: saltCounter.toString(), hash: h.hex()}, {owner: username});
+  servers.set(serverName, {salt: saltCounter.toString(), hash: h.hex(), owner: username});
   saltCounter++;
 
   resp.status(200).send(serverName).end();

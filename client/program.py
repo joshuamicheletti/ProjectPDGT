@@ -13,8 +13,6 @@ from tkinter.filedialog import askopenfilename
 url = "https://projectpdgt.herokuapp.com"
 # url = "http://localhost:2000"
 
-user = ""
-
 serverCurrent = ""
 
 modList = []
@@ -48,12 +46,18 @@ commands = ["Upload Mod", "Download Mod", "Change Server", "Logout", "Close"]
 username = ""
 password = ""
 
+currentServerPassword = ""
 
-def login(username, password):
-  global user
+serverOwner = False
+
+
+def login(usernameL, passwordL):
+  global username
   global serverMessage
+  global username
+  global password
 
-  credentials = username + ":" + password
+  credentials = usernameL + ":" + passwordL
   credentials_bytes = credentials.encode('ascii')
   base64_bytes = base64.b64encode(credentials_bytes)
   base64_message = base64_bytes.decode('ascii')
@@ -65,7 +69,9 @@ def login(username, password):
   r = requests.get(url + '/secret', headers = headers)
 
   if r.status_code == 200:
-    user = r.text
+    username = r.text
+    username = usernameL
+    password = passwordL
     serverMessage = ""
     return True
     
@@ -73,14 +79,16 @@ def login(username, password):
     serverMessage = r.text
     return False
 
-def loginCookie(username, password):
-  global user
+def loginCookie(usernameL, passwordL):
+  global username
   global serverMessage
+  global username
+  global password
 
-  r = requests.post(url + '/login?username=' + username + '&password=' + password)
+  r = requests.post(url + '/login?username=' + usernameL + '&password=' + passwordL)
 
   if r.status_code == 200:
-    user = r.text
+    username = r.text
     try:
       cookieFile = open("cookie.txt", "x")
       cookieFile.write(r.cookies["auth"])
@@ -91,6 +99,8 @@ def loginCookie(username, password):
       cookieFile.close()
 
     serverMessage = ""
+    username = usernameL
+    password = passwordL
     return True
     
   else:
@@ -98,7 +108,7 @@ def loginCookie(username, password):
     return False
 
 def loginWithoutCredentials():
-  global user
+  global username
   try:
     cookieFile = open("cookie.txt", "r")
     headers = {
@@ -108,7 +118,7 @@ def loginWithoutCredentials():
     x = requests.get(url + '/secret', headers = headers)
     
     if int(x.status_code) == 200:
-      user = x.text
+      username = x.text
       return True 
       
     else:
@@ -117,11 +127,13 @@ def loginWithoutCredentials():
   except IOError:
     return False
 
-def register(username, password):
+def register(usernameL, passwordL):
   global serverMessage
-  global user
+  global username
+  global username
+  global password
 
-  credentials = username + ":" + password
+  credentials = usernameL + ":" + passwordL
   credentials_bytes = credentials.encode('ascii')
   base64_bytes = base64.b64encode(credentials_bytes)
   base64_message = base64_bytes.decode('ascii')
@@ -133,7 +145,9 @@ def register(username, password):
   r = requests.post(url + '/register', headers = headers)
 
   if r.status_code == 200:
-    user = r.text
+    username = r.text
+    username = usernameL
+    password = passwordL
     serverMessage = ""
     return True
   else:
@@ -269,6 +283,8 @@ def createServer(serverName, serverPassword):
   global password
   global upToDateServer
   global serverCurrent
+  global currentServerPassword
+  global serverOwner
 
   try:
     cookieFile = open("cookie.txt", "r")
@@ -280,6 +296,8 @@ def createServer(serverName, serverPassword):
 
     if r.status_code == 200:
       serverCurrent = r.text
+      currentServerPassword = serverPassword
+      serverOwner = True
       return True
     else:
       serverMessage = r.text
@@ -295,10 +313,12 @@ def createServer(serverName, serverPassword):
       'Authorization': 'Basic ' + base64_message
     }
 
-    r = requests.post(url + "/servers" + "?serverName=" + serverName + "?serverPassword=" + serverPassword, headers = headers)
+    r = requests.post(url + "/servers" + "?serverName=" + serverName + "&serverPassword=" + serverPassword, headers = headers)
 
     if r.status_code == 200:
-      serverMessage = r.text
+      serverCurrent = r.text
+      currentServerPassword = serverPassword
+      serverOwner = True
       upToDateServer = False
       return True
     else:
@@ -309,11 +329,18 @@ def loginServer(serverPassword):
   global serverList
   global serverMessage
   global serverCurrent
+  global currentServerPassword
+  global serverOwner
+  global username
 
   r = requests.get(url + "/servers" + "?serverName=" + serverList[selectedServer - 1] + "&serverPassword=" + serverPassword)
 
   if r.status_code == 200:
-    serverCurrent = r.text
+    info = r.text.split(",")
+    serverCurrent = info[0]
+    if info[1] == username:
+      serverOwner = True
+    currentServerPassword = serverPassword
     return True
   else:
     serverMessage = r.text
@@ -321,22 +348,70 @@ def loginServer(serverPassword):
 
 
 def uploadMod(path):
+  global serverMessage
+  global serverCurrent
+  global currentServerPassword
+
   splitString = path.split("/")
   filename = splitString[len(splitString) - 1]
+
+  payload = {}
 
   files=[
     ('avatar',(filename, open(path,'rb'),'application/java-archive'))
   ]
 
-  # r = requests.post(url, files=files)
+  try:
+    cookieFile = open("cookie.txt", "r")
+    headers = {
+      'Cookie': 'auth=' + cookieFile.read()
+    }
+    cookieFile.close()
+    r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
 
-  payload = {}
-  headers = {}
+    if r.status_code == 200:
+      return True
 
-  r = requests.request("POST", url + '/upload', headers = headers, data = payload, files = files)
+    elif r.status_code == 403:
+      serverMessage = r.text
+      return False
+      
+    else:
+      credentials = username + ":" + password
+      credentials_bytes = credentials.encode('ascii')
+      base64_bytes = base64.b64encode(credentials_bytes)
+      base64_message = base64_bytes.decode('ascii')
 
-  # print(r.status_code)
-  # print(r.text)
+      headers = {
+        'Authorization': 'Basic ' + base64_message
+      }
+
+      r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
+
+      if r.status_code == 200:
+        return True
+      else:
+        serverMessage = r.text
+        return False
+      
+
+  except IOError:
+    credentials = username + ":" + password
+    credentials_bytes = credentials.encode('ascii')
+    base64_bytes = base64.b64encode(credentials_bytes)
+    base64_message = base64_bytes.decode('ascii')
+
+    headers = {
+      'Authorization': 'Basic ' + base64_message
+    }
+
+    r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
+
+    if r.status_code == 200:
+      return True
+    else:
+      serverMessage = r.text
+      return False
 
 def downloadMod(modName):
   r = requests.request("GET", url + '/download' + "?mod=" + modName)
@@ -412,6 +487,7 @@ def main():
   global upToDateServer
   global serverCurrent
   global upToDate
+  global serverOwner
 
   running = True
   loggedIn = False
@@ -441,22 +517,21 @@ def main():
         while msvcrt.kbhit():
           msvcrt.getch()
         sys.stdin.flush()
-        username = input("\nUsername: ")
+        usernameL = input("\nUsername: ")
         print()
-        password = stdiomask.getpass(mask='*')
-        if login(username, password):
+        passwordL = stdiomask.getpass(mask='*')
+        if login(usernameL, passwordL):
           loggedIn = True
-          
         enter = False
 
       elif selectedLoginCommand == 1 and enter == True:
         while msvcrt.kbhit():
           msvcrt.getch()
         sys.stdin.flush()
-        username = input("\nUsername: ")
+        usernameL = input("\nUsername: ")
         print()
-        password = stdiomask.getpass(mask='*')
-        if loginCookie(username, password):
+        passwordL = stdiomask.getpass(mask='*')
+        if loginCookie(usernameL, passwordL):
           loggedIn = True
         enter = False
 
@@ -464,10 +539,10 @@ def main():
         while msvcrt.kbhit():
           msvcrt.getch()
         sys.stdin.flush()
-        username = input("\nUsername: ")
+        usernameL = input("\nUsername: ")
         print()
-        password = stdiomask.getpass(mask='*')
-        if register(username, password):
+        passwordL = stdiomask.getpass(mask='*')
+        if register(usernameL, passwordL):
           loggedIn = True
         enter = False
         
@@ -475,10 +550,10 @@ def main():
         while msvcrt.kbhit():
           msvcrt.getch()
         sys.stdin.flush()
-        username = input("\nUsername: ")
+        usernameL = input("\nUsername: ")
         print()
-        password = stdiomask.getpass(mask='*')
-        deleteUser(username, password)
+        passwordL = stdiomask.getpass(mask='*')
+        deleteUser(usernameL, passwordL)
         enter = False
 
       elif selectedLoginCommand == 4 and enter == True:
@@ -489,7 +564,7 @@ def main():
     # SERVER LOGIN
 
     elif not serverLoggedIn:
-      print("User: " + user)
+      print("User: " + username)
 
       printServers()
 
@@ -515,6 +590,7 @@ def main():
         elif selectedServer == len(serverList) + 1:
           enter = False
           loggedIn = False
+          serverOwner = False
 
           try:
             os.remove("cookie.txt")
@@ -540,7 +616,10 @@ def main():
       
       enter = False
 
-      print("User: " + user)
+      if serverOwner:
+        print("User:", colored(username, 'cyan'))
+      else:
+        print("User: " + username)
 
       print("\nServer: " + serverCurrent)
 
@@ -550,32 +629,36 @@ def main():
 
       printCommands()
 
-      serverMessage = ""
-
-      
       while not pressed and not enter:
         pass
       pressed = False
 
 
       if selectedCommand == 0 and enter == True:
+        serverMessage = ""
         enter = False
         path = askopenfilename()
         uploadMod(path)
         upToDate = False
+        
 
       elif selectedCommand == 1 and enter == True:
+        serverMessage = ""
         enter = False
         downloadMod(modList[selectedMod])
 
       elif selectedCommand == 2 and enter == True:
+        serverMessage = ""
         enter = False
         serverLoggedIn = False
+        serverOwner = False
         
       elif selectedCommand == 3 and enter == True:
+        serverMessage = ""
         enter = False
         loggedIn = False
         serverLoggedIn = False
+        serverOwner = False
         try:
           os.remove("cookie.txt")
         except IOError:

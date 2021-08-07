@@ -435,10 +435,10 @@ app.post('/servers', (req, resp) => {
 
 
 // listen for requests :)
-// const listener = app.listen(process.env.PORT, () => {
-//   console.log("Your app is listening on port " + listener.address().port);
-// });
-
-const listener = app.listen(2000, () => {
+const listener = app.listen(process.env.PORT, () => {
   console.log("Your app is listening on port " + listener.address().port);
 });
+
+// const listener = app.listen(2000, () => {
+//   console.log("Your app is listening on port " + listener.address().port);
+// });

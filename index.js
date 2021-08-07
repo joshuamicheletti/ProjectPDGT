@@ -357,15 +357,15 @@ app.get('/upload', (req, res) => {
   const output = [];
 
   fs.readdir(directoryPath, function (err, files) {
-    if (err) {
-      res.sendStatus(400);
-    } else {
+    // if (err) {
+    //   res.sendStatus(400);
+    // } else {
       files.forEach(function (file) {
         output.push(file);
       });
 
       res.json(output);
-    }
+    // }
   });
 });
 
@@ -435,10 +435,10 @@ app.post('/servers', (req, resp) => {
 
 
 // listen for requests :)
-const listener = app.listen(process.env.PORT, () => {
-  console.log("Your app is listening on port " + listener.address().port);
-});
-
-// const listener = app.listen(2000, () => {
+// const listener = app.listen(process.env.PORT, () => {
 //   console.log("Your app is listening on port " + listener.address().port);
 // });
+
+const listener = app.listen(2000, () => {
+  console.log("Your app is listening on port " + listener.address().port);
+});

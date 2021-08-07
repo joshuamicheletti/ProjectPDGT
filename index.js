@@ -357,15 +357,15 @@ app.get('/upload', (req, res) => {
   const output = [];
 
   fs.readdir(directoryPath, function (err, files) {
-    // if (err) {
-    //   res.sendStatus(400);
-    // } else {
+    if (err) {
+      res.sendStatus(400);
+    } else {
       files.forEach(function (file) {
         output.push(file);
       });
 
       res.json(output);
-    // }
+    }
   });
 });
 

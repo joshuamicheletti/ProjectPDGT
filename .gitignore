@@ -21,5 +21,7 @@ bin-release/
 node_modules/
 modsToUpload/
 uploads/
+download/
+Minio/
 *.txt
 

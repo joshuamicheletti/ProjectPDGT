@@ -10,8 +10,8 @@ from termcolor import colored
 from tkinter import Tk     # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
 
-url = "https://projectpdgt.herokuapp.com"
-# url = "http://localhost:2000"
+# url = "https://projectpdgt.herokuapp.com"
+url = "http://localhost:2000"
 
 serverCurrent = ""
 

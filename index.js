@@ -6,6 +6,8 @@ const multer  = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { resolvePtr } = require("dns");
+const minio = require('minio');
+// const multerMinioStorage = require('multer-minio-storage');
 // const upload = multer({ dest: 'uploads/' })
 
 var storage = multer.diskStorage(
@@ -22,8 +24,28 @@ var storage = multer.diskStorage(
   }
 );
 
+// const upload = multer({storage: storage});
+// const upload = multer();
+const upload = multer({storage: multer.memoryStorage()});
 
-const upload = multer({storage: storage});
+
+const minioClient = new minio.Client({
+  endPoint: '188.152.172.50',
+  port: 9000,
+  accessKey: "minio",
+  secretKey: "password",
+  signatureVersion: 'v4',
+  useSSL: false
+});
+
+console.log(minioClient.ClientOptions);
+
+// const uploadMinio = multer({
+//   storage: multerMinioStorage({
+//     minioClient: minioClient,
+//     bucket: 'mods'
+//   })
+// });
 
 
 app.use(express.json());
@@ -302,7 +324,7 @@ app.delete('/users', (req, resp) => {
   resp.status(200).send("Deleted user: " + user).end();
 });
 
-app.post('/upload', (req, res) => {
+app.post('/upload', upload.single('avatar'), (req, res) => {
   if (!req.query.serverName || !req.query.serverPassword) {
     res.status(400).send('Invalid Server Name or Password').end();
     return false;
@@ -345,16 +367,23 @@ app.post('/upload', (req, res) => {
     return false;
   }
 
-  var _upload = upload.single('avatar');
-
-  _upload(req, res, function(err) {});
+  minioClient.putObject("mods", req.file.originalname, req.file.buffer, function(error, etag) {
+    if (error) {
+      res.status(400).send("Minio Error").end();
+      return console.log(error);
+    }
+  });
 
   res.status(200).send("Mod succesfully uploaded").end();
 });
 
 app.get('/upload', (req, res) => {
-  const directoryPath = path.join('./uploads');
+  const directoryPath = path.join('./uploads/');
   const output = [];
+
+  // console.log(minioClient.listObjects("mods"));
+  var stream = minioClient.listObjects("mods");
+  stream.on('data', function(obj) { console.log(obj) });
 
   fs.readdir(directoryPath, function (err, files) {
     if (err) {

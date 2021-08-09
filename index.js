@@ -378,23 +378,17 @@ app.post('/upload', upload.single('avatar'), (req, res) => {
 });
 
 app.get('/upload', (req, res) => {
-  const directoryPath = path.join('./uploads/');
   const output = [];
 
-  // console.log(minioClient.listObjects("mods"));
   var stream = minioClient.listObjects("mods");
-  stream.on('data', function(obj) { console.log(obj) });
 
-  fs.readdir(directoryPath, function (err, files) {
-    if (err) {
-      res.sendStatus(400);
-    } else {
-      files.forEach(function (file) {
-        output.push(file);
-      });
+  stream.on('data', function(obj) {
+    console.log(obj);
+    output.push(obj.name);
+  });
 
-      res.json(output);
-    }
+  stream.on('end', function() {
+    res.json(output);
   });
 });
 

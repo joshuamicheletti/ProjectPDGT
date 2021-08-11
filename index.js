@@ -30,7 +30,7 @@ const upload = multer({storage: multer.memoryStorage()});
 
 
 const minioClient = new minio.Client({
-  endPoint: '188.152.172.50',
+  endPoint: 'mathorgadaorc.ddns.net',
   port: 9000,
   accessKey: "minio",
   secretKey: "password",

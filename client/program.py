@@ -6,6 +6,7 @@ import keyboard
 import msvcrt
 import sys
 import stdiomask
+import time
 from termcolor import colored
 from tkinter import Tk     # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
@@ -21,7 +22,7 @@ serverList = []
 
 selectedServer = 0
 
-upToDate = False
+upToDate = True
 
 upToDateServer = False
 
@@ -192,21 +193,75 @@ def printMods():
       print("> " + modList[i])
 
 def checkMods():
+  global modList
+  global upToDate
+  global serverMessage
+
+  previousModList = modList
+
+  while modList == previousModList:
+    r = requests.request("GET", url + '/upload')
+
+    if r.status_code == 200:
+      modIndexes = []
+      for m in re.finditer('"', r.text):
+        modIndexes.append(m.start())
+
+      modList = []
+
+      for i in range(0, len(modIndexes)):
+        if i % 2 == 1:
+          modList.append(r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
+          # print("> " + r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
+
+      # print(modList)
+      
+      # if previousModList == modList:
+      #   upToDate = False
+      # else:
+      #   upToDate = True
+
+      # print(modList)
+      # print(previousModList)
+
+    else:
+      serverMessage = r.text
+
+    time.sleep(0.1)
+
+  upToDate = True
+
+def getMods():
+  global modList
+  global upToDate
+  global serverMessage
+
   r = requests.request("GET", url + '/upload')
 
-  modIndexes = []
-  for m in re.finditer('"', r.text):
-    modIndexes.append(m.start())
+  if r.status_code == 200:
+    modIndexes = []
+    for m in re.finditer('"', r.text):
+      modIndexes.append(m.start())
 
-  global modList
-  modList = []
+    modList = []
 
-  for i in range(0, len(modIndexes)):
-    if i % 2 == 1:
-      modList.append(r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
-      # print("> " + r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
-  global upToDate
-  upToDate = True
+    for i in range(0, len(modIndexes)):
+      if i % 2 == 1:
+        modList.append(r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
+        # print("> " + r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
+
+    # print(modList)
+    
+    # if previousModList == modList:
+    #   upToDate = False
+    # else:
+    #   upToDate = True
+
+    # print(modList)
+    # print(previousModList)
+
+  else:
+    serverMessage = r.text
 
 
 def printCommands():
@@ -351,6 +406,7 @@ def uploadMod(path):
   global serverMessage
   global serverCurrent
   global currentServerPassword
+  global upToDate
 
   splitString = path.split("/")
   filename = splitString[len(splitString) - 1]
@@ -370,6 +426,7 @@ def uploadMod(path):
     r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
 
     if r.status_code == 200:
+      upToDate = False
       return True
 
     elif r.status_code == 403:
@@ -377,6 +434,31 @@ def uploadMod(path):
       return False
       
     else:
+      if username != "" and password != "":
+        credentials = username + ":" + password
+        credentials_bytes = credentials.encode('ascii')
+        base64_bytes = base64.b64encode(credentials_bytes)
+        base64_message = base64_bytes.decode('ascii')
+
+        headers = {
+          'Authorization': 'Basic ' + base64_message
+        }
+
+        r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
+
+        if r.status_code == 200:
+          upToDate = False
+          return True
+        else:
+          serverMessage = r.text
+          return False
+
+      else:
+        return False
+      
+
+  except IOError:
+    if username != "" and password != "":
       credentials = username + ":" + password
       credentials_bytes = credentials.encode('ascii')
       base64_bytes = base64.b64encode(credentials_bytes)
@@ -389,28 +471,13 @@ def uploadMod(path):
       r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
 
       if r.status_code == 200:
+        upToDate = False
         return True
       else:
         serverMessage = r.text
         return False
-      
-
-  except IOError:
-    credentials = username + ":" + password
-    credentials_bytes = credentials.encode('ascii')
-    base64_bytes = base64.b64encode(credentials_bytes)
-    base64_message = base64_bytes.decode('ascii')
-
-    headers = {
-      'Authorization': 'Basic ' + base64_message
-    }
-
-    r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
-
-    if r.status_code == 200:
-      return True
+    
     else:
-      serverMessage = r.text
       return False
 
 def downloadMod(modName):
@@ -488,6 +555,7 @@ def main():
   global serverCurrent
   global upToDate
   global serverOwner
+  global modList
 
   running = True
   loggedIn = False
@@ -607,15 +675,15 @@ def main():
           if loginServer(serverPassword):
             enter = False
             serverLoggedIn = True
+            modList = []
+            upToDate = False
+            # getMods()
 
       os.system('cls')
 
     # MOD MANAGEMENT
 
     else:
-      
-      enter = False
-
       if serverOwner:
         print("User:", colored(username, 'cyan'))
       else:
@@ -629,6 +697,7 @@ def main():
 
       printCommands()
 
+      pressed = False
       while not pressed and not enter:
         pass
       pressed = False
@@ -639,7 +708,6 @@ def main():
         enter = False
         path = askopenfilename()
         uploadMod(path)
-        upToDate = False
         
 
       elif selectedCommand == 1 and enter == True:

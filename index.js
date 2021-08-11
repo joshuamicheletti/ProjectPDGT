@@ -38,7 +38,7 @@ const minioClient = new minio.Client({
   useSSL: false
 });
 
-console.log(minioClient.ClientOptions);
+minioClient.setRequestOptions({timeout: 3000});
 
 // const uploadMinio = multer({
 //   storage: multerMinioStorage({
@@ -367,14 +367,46 @@ app.post('/upload', upload.single('avatar'), (req, res) => {
     return false;
   }
 
-  minioClient.putObject("mods", req.file.originalname, req.file.buffer, function(error, etag) {
-    if (error) {
-      res.status(400).send("Minio Error").end();
-      return console.log(error);
-    }
-  });
+  const output = [];
 
-  res.status(200).send("Mod succesfully uploaded").end();
+  try {
+    var stream = minioClient.listObjects("mods");
+    console.log("got the stream");
+
+    stream.on('data', function(obj) {
+      console.log("pushed obj to output");
+      output.push(obj.name);
+    });
+
+    stream.on('error', function(err) {
+      console.log(err);
+      res.status(400).send("Minio Timeout Error").end();
+    });
+
+    stream.on('end', function() {
+      for (var i = 0; i < output.length; i++) {
+        if (req.file.originalname == output[i]) {
+          res.status(400).send("Mod already exists").end();
+          return;
+        }
+      }
+
+      console.log("putting object in bucket");
+      minioClient.putObject("mods", req.file.originalname, req.file.buffer, function(error, etag) {
+        console.log("finished putting object");
+        if (error) {
+          res.status(400).send("Minio Error").end();
+          return console.log(error);
+        } else {
+          res.status(200).send("Mod succesfully uploaded").end();
+        }
+      });
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(400).send("unknown error").end();
+  }
 });
 
 app.get('/upload', (req, res) => {
@@ -385,6 +417,11 @@ app.get('/upload', (req, res) => {
   stream.on('data', function(obj) {
     console.log(obj);
     output.push(obj.name);
+  });
+
+  stream.on('error', function(err) {
+    console.log(err);
+    res.status(400).send("Minio Timeout Error").end();
   });
 
   stream.on('end', function() {

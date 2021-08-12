@@ -430,9 +430,59 @@ app.get('/upload', (req, res) => {
 });
 
 app.get('/download', (req, res) => {
-  const fileDirectory = './uploads/' + req.query.mod;
-  // const file = './uploads/Xaeros_Minimap_21.10.0.3_Forge_1.16.5.jar';
-  res.download(fileDirectory);
+  if (!attemptAuth(req)) {
+    res.status(400).send("Wrong login info").end();
+    return;
+  }
+
+  if (!req.query.mod) {
+    res.status(400).send("Invalid Mod").end();
+    return;
+  }
+
+  const fileName = req.query.mod;
+
+  var bucketStream = minioClient.listObjects("mods");
+
+  const mods = [];
+
+  bucketStream.on("data", function(obj) {
+    mods.push(obj.name);
+  });
+
+  bucketStream.on("error", function(error) {
+    console.log(error);
+  });
+
+  bucketStream.on("end", function() {
+    var found = false;
+
+    for (var i = 0; i < mods.length; i++) {
+      if (fileName == mods[i]) {
+        found = true;
+      }
+    }
+
+    if (!found) {
+      res.status(400).send("Mod not found").end();
+      return;
+    }
+
+    minioClient.getObject('mods', fileName, function(err, dataStream) {
+      if (err) {
+        return console.log(err);
+      }
+  
+      dataStream.on('error', function(err) {
+        console.log(err);
+        return;
+      });
+  
+      res.setHeader('Content-disposition', 'attachment; filename=' + fileName);
+  
+      dataStream.pipe(res);
+    });
+  });
 });
 
 app.get('/servers', (req, resp) => {
@@ -495,10 +545,10 @@ app.post('/servers', (req, resp) => {
 
 
 // listen for requests :)
-const listener = app.listen(process.env.PORT, () => {
-  console.log("Your app is listening on port " + listener.address().port);
-});
-
-// const listener = app.listen(2000, () => {
+// const listener = app.listen(process.env.PORT, () => {
 //   console.log("Your app is listening on port " + listener.address().port);
 // });
+
+const listener = app.listen(2000, () => {
+  console.log("Your app is listening on port " + listener.address().port);
+});

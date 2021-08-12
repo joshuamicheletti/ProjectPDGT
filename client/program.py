@@ -11,8 +11,8 @@ from termcolor import colored
 from tkinter import Tk     # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
 
-url = "https://projectpdgt.herokuapp.com"
-# url = "http://localhost:2000"
+# url = "https://projectpdgt.herokuapp.com"
+url = "http://localhost:2000"
 
 serverCurrent = ""
 
@@ -481,19 +481,113 @@ def uploadMod(path):
       return False
 
 def downloadMod(modName):
-  r = requests.request("GET", url + '/download' + "?mod=" + modName)
-  # print(r.status_code)
+  global serverMessage
 
-  # downloadPath = "C:/Users/Joshua/AppData/Roaming/.minecraft/mods/"
   downloadPath = "./download/"
 
   try:
-    file = open(downloadPath + modName, "xb")
-    file.write(r.content)
+    cookieFile = open("cookie.txt", "r")
+    headers = {
+      'Cookie': 'auth=' + cookieFile.read()
+    }
+    cookieFile.close()
+    r = requests.request("GET", url + '/download' + "?mod=" + modName, headers = headers)
+
+    if r.status_code == 200:
+      try:
+        file = open(downloadPath + modName, "xb")
+        file.write(r.content)
+
+      except IOError:
+        file = open(downloadPath + modName, "wb")
+        file.write(r.content)
+      
+      finally:
+        return True
+    
+    elif r.status_code == 404:
+      serverMessage = r.text
+      return False
+
+    else:
+      if username != "" and password != "":
+        credentials = username + ":" + password
+        credentials_bytes = credentials.encode('ascii')
+        base64_bytes = base64.b64encode(credentials_bytes)
+        base64_message = base64_bytes.decode('ascii')
+
+        headers = {
+          'Authorization': 'Basic ' + base64_message
+        }
+
+        r = requests.request("GET", url + '/download' + "?mod=" + modName, headers = headers)
+
+        if r.status_code == 200:
+          try:
+            file = open(downloadPath + modName, "xb")
+            file.write(r.content)
+
+          except IOError:
+            file = open(downloadPath + modName, "wb")
+            file.write(r.content)
+          
+          finally:
+            return True
+
+        else:
+          serverMessage = r.text
+          return False
+
+      else:
+        return False
 
   except IOError:
-    file = open(downloadPath + modName, "wb")
-    file.write(r.content)
+      if username != "" and password != "":
+        credentials = username + ":" + password
+        credentials_bytes = credentials.encode('ascii')
+        base64_bytes = base64.b64encode(credentials_bytes)
+        base64_message = base64_bytes.decode('ascii')
+
+        headers = {
+          'Authorization': 'Basic ' + base64_message
+        }
+
+        r = requests.request("GET", url + '/download' + "?mod=" + modName, headers = headers)
+
+        if r.status_code == 200:
+          try:
+            file = open(downloadPath + modName, "xb")
+            file.write(r.content)
+
+          except IOError:
+            file = open(downloadPath + modName, "wb")
+            file.write(r.content)
+          
+          finally:
+            return True
+            
+        else:
+          serverMessage = r.text
+          return False
+
+      else:
+        return False
+
+
+
+  # r = requests.request("GET", url + '/download' + "?mod=" + modName)
+  # # print(r.status_code)
+
+  # # downloadPath = "C:/Users/Joshua/AppData/Roaming/.minecraft/mods/"
+  
+
+  # try:
+  #   file = open(downloadPath + modName, "xb")
+  #   file.write(r.content)
+
+  # except IOError:
+  #   file = open(downloadPath + modName, "wb")
+  #   file.write(r.content)
 
 def my_keyboard_hook(keyboard_event):
     global selectedMod

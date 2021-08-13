@@ -150,13 +150,34 @@ var saltCounter = 0;
 }
 
 
+function map_to_object(map) {
+  const out = Object.create(null)
+  map.forEach((value, key) => {
+    if (value instanceof Map) {
+      out[key] = map_to_object(value)
+    }
+    else {
+      out[key] = value
+    }
+  })
+  return out
+}
+
+const usersFile = JSON.parse(fs.readFileSync('users.json'));
+
 const logins = new Map();
-logins.set('joshua', {salt: '123456', hash: 'aca2d6bd777ac00e4581911a87dcc8a11b5faf11e08f584513e380a01693ef38'}, {admin: true});
+
+for (var key in usersFile) {
+  logins.set(key, usersFile[key]);
+}
+
+const serversFile = JSON.parse(fs.readFileSync('servers.json'));
 
 const servers = new Map();
-const h = sha256.create();
-h.update("0" + "password");
-servers.set('minecuraftu', {salt: '0', hash: h.hex(), owner: "joshua"});
+
+for (var key in serversFile) {
+  servers.set(key, serversFile[key]);
+}
 
 const cookies = new Map();
 
@@ -255,7 +276,7 @@ app.post('/login', (req, resp) => {
   resp.status(200).send(username).end();
 });
 
-app.post('/register', (req, resp) => {
+app.post('/users', (req, resp) => {
   if (!req.headers.authorization) {
     resp.status(400).send("Invalid Registration").end();
     return;
@@ -288,6 +309,9 @@ app.post('/register', (req, resp) => {
   h.update(compound);
 
   logins.set(user, {salt: saltCounter.toString(), hash: h.hex()}, {admin: false});
+
+  fs.writeFileSync("users.json", JSON.stringify(map_to_object(logins)));
+
   console.log(h.hex(), saltCounter);
   saltCounter++;
 
@@ -320,6 +344,8 @@ app.delete('/users', (req, resp) => {
   }
 
   logins.delete(user);
+
+  fs.writeFileSync("users.json", JSON.stringify(map_to_object(logins)));
 
   resp.status(200).send("Deleted user: " + user).end();
 });
@@ -538,6 +564,8 @@ app.post('/servers', (req, resp) => {
   h.update(saltCounter.toString() + serverPassword);
   servers.set(serverName, {salt: saltCounter.toString(), hash: h.hex(), owner: username});
   saltCounter++;
+
+  fs.writeFileSync("servers.json", JSON.stringify(map_to_object(servers)));
 
   resp.status(200).send(serverName).end();
 });

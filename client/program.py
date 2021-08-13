@@ -143,7 +143,7 @@ def register(usernameL, passwordL):
     'Authorization': 'Basic ' + base64_message
   }
 
-  r = requests.post(url + '/register', headers = headers)
+  r = requests.post(url + '/users', headers = headers)
 
   if r.status_code == 200:
     username = r.text

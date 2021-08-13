@@ -163,21 +163,47 @@ function map_to_object(map) {
   return out
 }
 
-const usersFile = JSON.parse(fs.readFileSync('users.json'));
+async function streamToString (stream) {
+  const chunks = [];
+  return new Promise((resolve, reject) => {
+    stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    stream.on('error', (err) => reject(err));
+    stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+  })
+}
 
 const logins = new Map();
 
-for (var key in usersFile) {
-  logins.set(key, usersFile[key]);
-}
+minioClient.getObject('info', "users.json", async function(err, dataStream) {
+  if (err) {
+    return console.log(err);
+  }
 
-const serversFile = JSON.parse(fs.readFileSync('servers.json'));
+  usersString = await streamToString(dataStream);
+
+  usersFile = JSON.parse(usersString);
+  
+  for (var key in usersFile) {
+    logins.set(key, usersFile[key]);
+  }
+});
+
 
 const servers = new Map();
 
-for (var key in serversFile) {
-  servers.set(key, serversFile[key]);
-}
+minioClient.getObject('info', "servers.json", async function(err, dataStream) {
+  if (err) {
+    return console.log(err);
+  }
+
+  serversString = await streamToString(dataStream);
+
+  serverFile = JSON.parse(serversString);
+
+  for (var key in serverFile) {
+    servers.set(key, serverFile[key]);
+  }
+});
 
 const cookies = new Map();
 
@@ -228,6 +254,13 @@ function attemptAuth(req) {
   //return(login == 'joshua' && password == 'password');
   return attemptLogin(login, password);
 }
+
+
+app.get('/check', (req, res) => {
+  console.log(servers);
+  console.log(logins);
+  res.status(200).end();
+})
 
 app.get('/secret', (req, resp) => {
   if (attemptAuth(req)) {
@@ -308,14 +341,19 @@ app.post('/users', (req, resp) => {
   const h = sha256.create();
   h.update(compound);
 
-  logins.set(user, {salt: saltCounter.toString(), hash: h.hex()}, {admin: false});
-
-  fs.writeFileSync("users.json", JSON.stringify(map_to_object(logins)));
-
+  logins.set(user, {salt: saltCounter.toString(), hash: h.hex(), admin: false});
   console.log(h.hex(), saltCounter);
   saltCounter++;
 
-  resp.status(200).send(user);
+  minioClient.putObject("info", "users.json", JSON.stringify(map_to_object(logins)), function(error, etag) {
+    console.log("finished putting object");
+    if (error) {
+      resp.status(400).send("Minio Error").end();
+      return console.log(error);
+    } else {
+      resp.status(200).send(user).end();
+    }
+  });
 });
 
 app.delete('/users', (req, resp) => {
@@ -345,9 +383,15 @@ app.delete('/users', (req, resp) => {
 
   logins.delete(user);
 
-  fs.writeFileSync("users.json", JSON.stringify(map_to_object(logins)));
-
-  resp.status(200).send("Deleted user: " + user).end();
+  minioClient.putObject("info", "users.json", JSON.stringify(map_to_object(logins)), function(error, etag) {
+    console.log("finished putting object");
+    if (error) {
+      resp.status(400).send("Minio Error").end();
+      return console.log(error);
+    } else {
+      resp.status(200).send("Deleted user: " + user).end();
+    }
+  });
 });
 
 app.post('/upload', upload.single('avatar'), (req, res) => {
@@ -565,9 +609,15 @@ app.post('/servers', (req, resp) => {
   servers.set(serverName, {salt: saltCounter.toString(), hash: h.hex(), owner: username});
   saltCounter++;
 
-  fs.writeFileSync("servers.json", JSON.stringify(map_to_object(servers)));
-
-  resp.status(200).send(serverName).end();
+  minioClient.putObject("info", "servers.json", JSON.stringify(map_to_object(servers)), function(error, etag) {
+    console.log("finished putting object");
+    if (error) {
+      resp.status(400).send("Minio Error").end();
+      return console.log(error);
+    } else {
+      resp.status(200).send(serverName).end();
+    }
+  });
 });
 
 

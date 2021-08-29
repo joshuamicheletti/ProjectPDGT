@@ -196,11 +196,13 @@ def checkMods():
   global modList
   global upToDate
   global serverMessage
+  global serverCurrent
+  global currentServerPassword
 
   previousModList = modList
 
   while modList == previousModList:
-    r = requests.request("GET", url + '/upload')
+    r = requests.request("GET", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword)
 
     if r.status_code == 200:
       modIndexes = []
@@ -235,8 +237,10 @@ def getMods():
   global modList
   global upToDate
   global serverMessage
+  global serverCurrent
+  global currentServerPassword
 
-  r = requests.request("GET", url + '/upload')
+  r = requests.request("GET", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword)
 
   if r.status_code == 200:
     modIndexes = []
@@ -482,6 +486,8 @@ def uploadMod(path):
 
 def downloadMod(modName):
   global serverMessage
+  global serverCurrent
+  global currentServerPassword
 
   downloadPath = "./download/"
 
@@ -491,7 +497,7 @@ def downloadMod(modName):
       'Cookie': 'auth=' + cookieFile.read()
     }
     cookieFile.close()
-    r = requests.request("GET", url + '/download' + "?mod=" + modName, headers = headers)
+    r = requests.request("GET", url + '/download' + "?mod=" + modName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
     if r.status_code == 200:
       try:
@@ -520,7 +526,7 @@ def downloadMod(modName):
           'Authorization': 'Basic ' + base64_message
         }
 
-        r = requests.request("GET", url + '/download' + "?mod=" + modName, headers = headers)
+        r = requests.request("GET", url + '/download' + "?mod=" + modName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
         if r.status_code == 200:
           try:
@@ -552,7 +558,7 @@ def downloadMod(modName):
           'Authorization': 'Basic ' + base64_message
         }
 
-        r = requests.request("GET", url + '/download' + "?mod=" + modName, headers = headers)
+        r = requests.request("GET", url + '/download' + "?mod=" + modName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
         if r.status_code == 200:
           try:
@@ -650,6 +656,7 @@ def main():
   global upToDate
   global serverOwner
   global modList
+  global selectedMod
 
   running = True
   loggedIn = False
@@ -742,12 +749,16 @@ def main():
             msvcrt.getch()
           sys.stdin.flush()
           serverName = input("\nServer Name: ")
+          serverName = serverName.lower()
           print()
           serverPassword = stdiomask.getpass(mask='*')
           if createServer(serverName, serverPassword):
             enter = False
             serverLoggedIn = True
             upToDateServer = False
+            modList = ["null"]
+            upToDate = False
+            selectedMod = 0
 
         elif selectedServer == len(serverList) + 1:
           enter = False
@@ -769,8 +780,9 @@ def main():
           if loginServer(serverPassword):
             enter = False
             serverLoggedIn = True
-            modList = []
+            modList = ["null"]
             upToDate = False
+            selectedMod = 0
             # getMods()
 
       os.system('cls')
@@ -800,9 +812,11 @@ def main():
       if selectedCommand == 0 and enter == True:
         serverMessage = ""
         enter = False
-        path = askopenfilename()
-        uploadMod(path)
-        
+        try:
+          path = askopenfilename()
+          uploadMod(path)
+        except IOError:
+          print("File error")
 
       elif selectedCommand == 1 and enter == True:
         serverMessage = ""

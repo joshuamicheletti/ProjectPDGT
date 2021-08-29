@@ -487,7 +487,7 @@ app.post('/upload', upload.single('avatar'), (req, res) => {
   const output = [];
 
   // get the list of mods in the server
-  var stream = minioClient.listObjects("mods");
+  var stream = minioClient.listObjects(req.query.serverName);
   console.log("got the stream");
 
   // store the mod names in 'output'
@@ -514,7 +514,7 @@ app.post('/upload', upload.single('avatar'), (req, res) => {
 
     console.log("putting object in bucket");
     // put the uploaded mod in the bucket of the server
-    minioClient.putObject("mods", req.file.originalname, req.file.buffer, function(error, etag) {
+    minioClient.putObject(req.query.serverName, req.file.originalname, req.file.buffer, function(error, etag) {
       console.log("finished putting object");
       // check for Minio errors
       if (error) {
@@ -527,20 +527,32 @@ app.post('/upload', upload.single('avatar'), (req, res) => {
   });
 });
 
-// WRONG, REMEMBER TO MAKE IT WORK WITH USER AUTHORIZATION AND WITH SPECIFIC SERVER MODS
-
 // get /upload to get a list of the mods in a server
 app.get('/upload', (req, res) => {
+  if (!req.query.serverName || !req.query.serverPassword) {
+    res.status(400).send("No server info").end();
+    return false;
+  }
+
+  var hash = encodeSaltPasswordSha256(servers.get(req.query.serverName).salt, req.query.serverPassword);
+
+  if (hash != servers.get(req.query.serverName).hash) {
+    res.status(400).send("Wrong server password").end();
+    return false;
+  }
+
   // variable for storing the list of mods
   const output = [];
   
   // get the list of mods from the bucket into a stream
-  var stream = minioClient.listObjects("mods");
+  var stream = minioClient.listObjects(req.query.serverName);
 
   // read all the objects in the bucket and store them in 'output'
   stream.on('data', function(obj) {
     console.log(obj);
-    output.push(obj.name);
+    if (obj.name != "1.txt" && obj.name != "2.txt") {
+      output.push(obj.name);
+    }
   });
   // catch any error
   stream.on('error', function(err) {
@@ -559,19 +571,31 @@ app.get('/download', (req, res) => {
   // check if the user is authorized
   if (!attemptAuth(req)) {
     res.status(400).send("Wrong login info").end();
-    return;
+    return false;
   }
 
   // check if the request contains any mod name
   if (!req.query.mod) {
     res.status(400).send("Invalid Mod").end();
+    return false;
+  }
+
+  if (!req.query.serverName || !req.query.serverPassword) {
+    res.status(400).send("No server info").end();
+    return false;
+  }
+
+  var hash = encodeSaltPasswordSha256(servers.get(req.query.serverName).salt, req.query.serverPassword);
+
+  if (hash != servers.get(req.query.serverName).hash) {
+    res.status(400).send("Wrong server password").end();
     return;
   }
 
   const fileName = req.query.mod;
 
   // get the list of mods
-  var bucketStream = minioClient.listObjects("mods");
+  var bucketStream = minioClient.listObjects(req.query.serverName);
 
   // variable for storing the mod names
   const mods = [];
@@ -603,7 +627,7 @@ app.get('/download', (req, res) => {
     }
 
     // get the selected mod from the Minio server
-    minioClient.getObject('mods', fileName, function(err, dataStream) {
+    minioClient.getObject(req.query.serverName, fileName, function(err, dataStream) {
       // catch any Minio error
       if (err) {
         res.status(400).send("Minio Error").end();
@@ -700,7 +724,28 @@ app.post('/servers', (req, resp) => {
       resp.status(400).send("Minio Error").end();
       return console.log(error);
     } else {
-      resp.status(200).send(serverName).end();
+      minioClient.makeBucket(serverName, function(error) {
+        if (error) {
+          resp.status(400).send("Minio Bucket Error").end();
+          return console.log(error);
+        } else {
+          minioClient.putObject(serverName, "1.txt", "do not read", function(error, etag) {
+            if (error) {
+              resp.status(400).send("Minio Error").end();
+              return console.log(error);
+            } else {
+              minioClient.putObject(serverName, "2.txt", "do not read", function(error, etag) {
+                if (error) {
+                  resp.status(400).send("Minio Error").end();
+                  return console.log(error);
+                } else {
+                  resp.status(200).send(serverName).end();
+                }
+              });
+            }
+          });
+        }
+      });
     }
   });
 });

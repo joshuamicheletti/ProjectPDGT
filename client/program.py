@@ -42,7 +42,7 @@ serverMessage = ""
 
 loginCommands = ["Login", "Login with Cookie", "Register", "Delete", "Close"]
 
-commands = ["Upload Mod", "Download Mod", "Change Server", "Logout", "Close"]
+commands = ["Upload Mod", "Download Mod", "Change Server", "Delete Server", "Logout", "Close"]
 
 username = ""
 password = ""
@@ -384,6 +384,52 @@ def createServer(serverName, serverPassword):
       serverMessage = r.text
       return False
 
+def deleteServer():
+  global serverCurrent
+  global currentServerPassword
+  global serverOwner
+  global serverMessage
+  global upToDateServer
+
+  try:
+    cookieFile = open("cookie.txt", "r")
+    headers = {
+      'Cookie': 'auth=' + cookieFile.read()
+    }
+    cookieFile.close()
+    r = requests.delete(url + "/servers" + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
+
+    if r.status_code == 200:
+      serverCurrent = ""
+      currentServerPassword = ""
+      serverOwner = False
+      return True
+    else:
+      serverMessage = r.text
+      return False
+
+  except IOError:
+    credentials = username + ":" + password
+    credentials_bytes = credentials.encode('ascii')
+    base64_bytes = base64.b64encode(credentials_bytes)
+    base64_message = base64_bytes.decode('ascii')
+
+    headers = {
+      'Authorization': 'Basic ' + base64_message
+    }
+
+    r = requests.delete(url + "/servers" + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
+
+    if r.status_code == 200:
+      serverCurrent = ""
+      currentServerPassword = ""
+      serverOwner = False
+      upToDateServer = False
+      return True
+    else:
+      serverMessage = r.text
+      return False
+
 def loginServer(serverPassword):
   global serverList
   global serverMessage
@@ -668,7 +714,7 @@ def main():
 
   while running:
     if (serverMessage != ""):
-      print(serverMessage + "\n")
+      print(colored(serverMessage + "\n", 'yellow'))
 
     # LOGIN
 
@@ -737,13 +783,12 @@ def main():
 
       printServers()
 
-      serverMessage = ""
-
       while not pressed and not enter:
         pass
       pressed = False
       
       if enter == True:
+        serverMessage = ""
         if selectedServer == 0:
           while msvcrt.kbhit():
             msvcrt.getch()
@@ -808,7 +853,7 @@ def main():
         pass
       pressed = False
 
-
+      # upload mod
       if selectedCommand == 0 and enter == True:
         serverMessage = ""
         enter = False
@@ -818,18 +863,30 @@ def main():
         except IOError:
           print("File error")
 
+      # download mod
       elif selectedCommand == 1 and enter == True:
         serverMessage = ""
         enter = False
         downloadMod(modList[selectedMod])
 
+      # change server
       elif selectedCommand == 2 and enter == True:
         serverMessage = ""
         enter = False
         serverLoggedIn = False
         serverOwner = False
         
+      # delete server
       elif selectedCommand == 3 and enter == True:
+        serverMessage = ""
+        enter = False
+        if deleteServer():
+          serverLoggedIn = False
+          serverOwner = False
+          upToDateServer = False
+
+      # logout
+      elif selectedCommand == 4 and enter == True:
         serverMessage = ""
         enter = False
         loggedIn = False
@@ -840,7 +897,8 @@ def main():
         except IOError:
           print("No cookie to remove")
         
-      elif selectedCommand == 4 and enter == True:
+      # close
+      elif selectedCommand == 5 and enter == True:
         enter = False
         running = False
         

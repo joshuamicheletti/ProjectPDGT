@@ -37,103 +37,6 @@ app.use(cookieparser());
 // counter for salt, ensures that passwords aren't the same thanks to the salt
 var saltCounter = 0;
 
-// old code
-{
-// const data = new Map();
-// data.set(1, {name: "Mario", surname: "Rossi"});
-// data.set(2, {name: "Luigi", surname: "Verdi"});
-
-// var dataID = 2;
-
-
-
-// app.get('/people', (req, resp) => {
-//   if (!req.accepts('application/json')) {
-//     resp.sendStatus(406);
-//     return;
-//   }
-  
-//   const output = Array.from(data, ([key, value]) => {
-//     return {
-//       id: key,
-//       name: value.name,
-//       surname: value.surname
-//     };
-//   });
-//   resp.json(output);
-// });
-
-// app.get('/people/:id', (req, resp) => {
-//   const id = Number.parseInt(req.params.id);
-  
-//   if (Number.isNaN(id)) {
-//     resp.sendStatus(400);
-//     return;
-//   }
-//   if (!data.has(id)) {
-//     resp.sendStatus(404);
-//     return;
-//   }
-  
-//   const person = data.get(id);
-  
-//   resp.format({
-//     'text/plain': () => {
-//       resp.send(person.name + ' ' + person.surname);
-//     },
-//     'text/html': () => {
-//       resp.send('<html><body><p>Il signor <b>' + person.name + ' ' + person.surname + '</b></p></body></html>');
-//     },
-//     'application/json': () => {
-//       //resp.send(JSON.stringify(person));
-//       resp.json(person);
-//     },
-//     defaul: () => {
-//       resp.sendStatus(406);
-//     }
-//   });
-// });
-
-// app.post('/people', (req, resp) => {
-//   const input = req.body;
-  
-//   if (!input.name) {
-//     resp.sendStatus(422);
-//     return;
-//   }
-//   if (!input.surname) {
-//     resp.sendStatus(422);
-//     return;
-//   }
-  
-//   const name = new String(input.name);
-//   const surname = new String(input.surname);
-  
-//   dataID++;
-//   const newId = dataID;
-//   data.set(newId, {name: name, surname: surname});
-  
-//   resp.status(201).type('application/json').send(JSON.stringify({id: newId, name: name, surname: surname}));
-// });
-
-// app.delete('/people/:id', (req, resp) => {
-//   const id = Number.parseInt(req.params.id);
-  
-//   if (Number.isNaN(id)) {
-//     resp.sendStatus(400);
-//     return;
-//   }
-//   if (!data.has(id)) {
-//     resp.sendStatus(404);
-//     return;
-//   }
-  
-//   data.delete(id);
-  
-//   resp.sendStatus(200);
-// });
-}
-
 // function to obtain an object (JSON) from a map object
 function mapToObject(map) {
   // create an empty object
@@ -688,6 +591,17 @@ app.post('/servers', (req, resp) => {
     return;
   }
 
+  // check that the server isn't called 'info', info is a special bucket reserverd for storing servers and user data
+  if (req.query.serverName == "info") {
+    resp.status(400).send("Server can't be called 'info'").end();
+    return;
+  }
+
+  if (servers.has(req.query.serverName)) {
+    resp.status(400).send("Server with that name already exists").end();
+    return;
+  }
+
   // store the server info in variables
   var serverName = req.query.serverName;
   var serverPassword = req.query.serverPassword;
@@ -724,16 +638,22 @@ app.post('/servers', (req, resp) => {
       resp.status(400).send("Minio Error").end();
       return console.log(error);
     } else {
+      // create a new minio bucket to store the mods of the new server
       minioClient.makeBucket(serverName, function(error) {
+        // check for Minio errors
         if (error) {
           resp.status(400).send("Minio Bucket Error").end();
           return console.log(error);
         } else {
+          // put 2 placeholder objects inside of the bucket (these objects will be invisible to the client,
+          // they're there to prevent a bug on the Minio API which occurs while having a bucket with 1 item)
           minioClient.putObject(serverName, "1.txt", "do not read", function(error, etag) {
+            // check for Minio errors
             if (error) {
               resp.status(400).send("Minio Error").end();
               return console.log(error);
             } else {
+              // put the second placeholder object
               minioClient.putObject(serverName, "2.txt", "do not read", function(error, etag) {
                 if (error) {
                   resp.status(400).send("Minio Error").end();
@@ -747,6 +667,104 @@ app.post('/servers', (req, resp) => {
         }
       });
     }
+  });
+});
+
+// delete /servers to delete an existing server
+app.delete('/servers', (req, res) => {
+  // check if the user credentials are correct and authorized
+  if (!attemptAuth(req)) {
+    res.status(400).send("Wrong login info").end();
+    return;
+  }
+
+  // obtain the username from the request headers
+  var username;
+
+  // obtain the username from a cookie
+  if (req.cookies.auth) {
+    // check if the cookie is stored in the cookie list
+    if (cookies.has(req.cookies.auth)) {
+      username = cookies.get(req.cookies.auth);
+    }
+  // obtain a username from Basic authorization
+  } else if (req.headers.authorization) {
+    const [login, password] = decodeBase64(req.headers.authorization);
+    username = login;
+  }
+
+  // check if the request has server info
+  if (!req.query.serverName || !req.query.serverPassword) {
+    res.status(400).send("Wrong server info").end();
+    return;
+  }
+
+  // check if the server mentioned in the request exists
+  if (!servers.has(req.query.serverName)) {
+    res.status(400).send("No server with that name").end();
+    return;
+  }
+
+  // check if the password in the request matches with the password of the server
+  hash = encodeSaltPasswordSha256(servers.get(req.query.serverName).salt, req.query.serverPassword);
+
+  if (hash != servers.get(req.query.serverName).hash) {
+    res.status(400).send("Wrong server password").end();
+    return;
+  }
+
+  // check if the user in the request is the server owner
+  if (username != servers.get(req.query.serverName).owner) {
+    res.status(400).send("Not allowed to delete server").end();
+    return;
+  }
+
+  // list all the objects in the bucket corresponding to the server
+  var objectsList = [];
+
+  var objectsStream = minioClient.listObjects(req.query.serverName);
+
+  // store the objects in the list
+  objectsStream.on('data', function(obj) {
+    objectsList.push(obj.name);
+  });
+  // check for errors
+  objectsStream.on('error', function(e) {
+    console.log(e);
+    res.status(400).send("Minio error").end();
+    return;
+  });
+  // once the list is complete
+  objectsStream.on('end', function() {
+    // remove the objects listed in the 'objectsList' from the bucket of the server that is being deleted
+    minioClient.removeObjects(req.query.serverName, objectsList, function(e) {
+      // check for errors
+      if (e) {
+        res.status(400).send("Minio error").end();
+        return console.log("Unable to remove objects ", e);
+      } else {
+        // remove the bucket of the server that is being deleted
+        minioClient.removeBucket(req.query.serverName, function(e) {
+          if (e) {
+            res.status(400).send("Minio error").end();
+            return console.log("Unable to remove bucket");
+          } else {
+            // delete the server info from the 'servers' map
+            servers.delete(req.query.serverName); 
+            // save the new updated info in the 'servers.json' file in the 'info' bucket
+            minioClient.putObject("info", "servers.json", JSON.stringify(mapToObject(servers)), function(error, etag) {
+              // check for errors
+              if (error) {
+                res.status(400).send("Minio Error").end();
+                return console.log(error);
+              } else {
+                res.status(200).send("Server " + req.query.serverName + " removed").end();
+              }
+            });
+          }
+        });
+      }
+    });
   });
 });
 

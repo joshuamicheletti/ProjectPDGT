@@ -42,7 +42,7 @@ serverMessage = ""
 
 loginCommands = ["Login", "Login with Cookie", "Register", "Delete", "Close"]
 
-commands = ["Upload Mod", "Download Mod", "Change Server", "Delete Server", "Logout", "Close"]
+commands = ["Upload Mod", "Download Mod", "Delete Mod", "Change Server", "Delete Server", "Logout", "Close"]
 
 username = ""
 password = ""
@@ -641,6 +641,75 @@ def downloadMod(modName):
   #   file = open(downloadPath + modName, "wb")
   #   file.write(r.content)
 
+def deleteMod(modName):
+  global upToDate
+  global serverMessage
+  global serverCurrent
+  global currentServerPassword
+
+  try:
+    cookieFile = open("cookie.txt", "r")
+    headers = {
+      'Cookie': 'auth=' + cookieFile.read()
+    }
+    cookieFile.close()
+    r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&modName=" + modName, headers = headers)
+
+    if r.status_code == 200:
+      upToDate = False
+      return True
+
+    elif r.status_code == 403:
+      serverMessage = r.text
+      return False
+      
+    else:
+      if username != "" and password != "":
+        credentials = username + ":" + password
+        credentials_bytes = credentials.encode('ascii')
+        base64_bytes = base64.b64encode(credentials_bytes)
+        base64_message = base64_bytes.decode('ascii')
+
+        headers = {
+          'Authorization': 'Basic ' + base64_message
+        }
+
+        r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&modName=" + modName, headers = headers)
+
+        if r.status_code == 200:
+          upToDate = False
+          return True
+        else:
+          serverMessage = r.text
+          return False
+
+      else:
+        return False
+      
+
+  except IOError:
+    if username != "" and password != "":
+      credentials = username + ":" + password
+      credentials_bytes = credentials.encode('ascii')
+      base64_bytes = base64.b64encode(credentials_bytes)
+      base64_message = base64_bytes.decode('ascii')
+
+      headers = {
+        'Authorization': 'Basic ' + base64_message
+      }
+
+      r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&modName=" + modName, headers = headers)
+
+      if r.status_code == 200:
+        upToDate = False
+        return True
+      else:
+        serverMessage = r.text
+        return False
+    
+    else:
+      return False
+
 def my_keyboard_hook(keyboard_event):
     global selectedMod
     global pressed
@@ -869,15 +938,21 @@ def main():
         enter = False
         downloadMod(modList[selectedMod])
 
-      # change server
+      # delete mod
       elif selectedCommand == 2 and enter == True:
+        serverMessage = ""
+        enter = False
+        deleteMod(modList[selectedMod])
+
+      # change server
+      elif selectedCommand == 3 and enter == True:
         serverMessage = ""
         enter = False
         serverLoggedIn = False
         serverOwner = False
         
       # delete server
-      elif selectedCommand == 3 and enter == True:
+      elif selectedCommand == 4 and enter == True:
         serverMessage = ""
         enter = False
         if deleteServer():
@@ -886,7 +961,7 @@ def main():
           upToDateServer = False
 
       # logout
-      elif selectedCommand == 4 and enter == True:
+      elif selectedCommand == 5 and enter == True:
         serverMessage = ""
         enter = False
         loggedIn = False
@@ -898,7 +973,7 @@ def main():
           print("No cookie to remove")
         
       # close
-      elif selectedCommand == 5 and enter == True:
+      elif selectedCommand == 6 and enter == True:
         enter = False
         running = False
         

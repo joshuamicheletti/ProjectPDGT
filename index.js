@@ -469,6 +469,96 @@ app.get('/upload', (req, res) => {
   });
 });
 
+// delete /upload to delete a mod in a server
+app.delete('/upload', (req, res) => {
+  // check if the user is a valid logged in user
+  if (!attemptAuth(req)) {
+    res.status(400).send("Wrong login info").end();
+    return;
+  }
+
+  // check if the request contains the server info
+  if (!req.query.serverName || !req.query.serverPassword) {
+    res.status(400).send("Wrong server info").end();
+    return;
+  }
+
+  // check if the requested server exists
+  if (!servers.has(req.query.serverName)) {
+    res.status(400).send("No server with that name").end();
+    return;
+  }
+
+  // check if the request contains the correct password for the selected server
+  var hash = encodeSaltPasswordSha256(servers.get(req.query.serverName).salt, req.query.serverPassword);
+
+  if (hash != servers.get(req.query.serverName).hash) {
+    res.status(400).send("Wrong server password").end();
+    return;
+  }
+
+  // obtain the username from the request
+  if (req.cookies.auth) {
+    // get the username from the cookie map
+    var username = cookies.get(req.cookies.auth);
+  } else if (req.headers.authorization) {
+    // decode the authorization header
+    const [login, password] = decodeBase64(req.headers.authorization);
+    // get the username from the request
+    var username = login;
+  }
+
+  // check if the user is the server owner
+  if (username != servers.get(req.query.serverName).owner) {
+    res.status(400).send("Not allowed to delete mods").end();
+    return;
+  }
+
+  // check if the request contains a mod name
+  if (!req.query.modName) {
+    res.status(400).send("No mod info").end();
+    return;
+  }
+
+  // check if the mod exists in the server
+  var found = false;
+  
+  // get the list of mods from the bucket into a stream
+  var stream = minioClient.listObjects(req.query.serverName);
+
+  // read all the objects in the bucket and check when it finds the selected mod
+  stream.on('data', function(obj) {
+    if (obj.name == req.query.modName) {
+      found = true;
+    }
+  });
+  // catch any error
+  stream.on('error', function(err) {
+    console.log(err);
+    found = false;
+  });
+  // once the stream is over
+  stream.on('end', function() {
+    // if the selected mod was found
+    if (found) {
+      // remove the mod from the minio bucket
+      minioClient.removeObject(req.query.serverName, req.query.modName, function(err) {
+        // catch any error
+        if (err) {
+          res.status(400).send("Minio error").end();
+          return console.log(err);
+        } else {
+          res.status(200).send("Mod removed correctly").end();
+          return;
+        }
+      });
+    } else {
+      res.status(404).send("No mod with that name found").end();
+      return;
+    }
+  });
+});
+
 // get /download to download the specified mod
 app.get('/download', (req, res) => {
   // check if the user is authorized

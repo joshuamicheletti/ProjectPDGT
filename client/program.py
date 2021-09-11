@@ -3,7 +3,6 @@ import base64
 import re
 import os
 import keyboard
-import msvcrt
 import sys
 import stdiomask
 import time
@@ -51,6 +50,15 @@ currentServerPassword = ""
 
 serverOwner = False
 
+
+def flushInput():
+  try:
+    import sys, termios
+    termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+  except ImportError:
+    import msvcrt
+    while msvcrt.kbhit():
+        msvcrt.getch()
 
 def login(usernameL, passwordL):
   global username
@@ -722,7 +730,7 @@ def my_keyboard_hook(keyboard_event):
     # print("Scan code:", keyboard_event.scan_code)
     # print("Time:", keyboard_event.time)
     if pressed == False:
-      if keyboard_event.scan_code == 72: #up
+      if keyboard_event.scan_code == 103 or keyboard_event.scan_code == 72: #up
         if selectedMod > 0:
           selectedMod -= 1
 
@@ -730,7 +738,7 @@ def my_keyboard_hook(keyboard_event):
           selectedServer -= 1
         pressed = True
 
-      if keyboard_event.scan_code == 80: #down
+      if keyboard_event.scan_code == 108 or keyboard_event.scan_code == 80: #down
         if selectedMod < len(modList) - 1:
           selectedMod += 1
 
@@ -738,7 +746,7 @@ def my_keyboard_hook(keyboard_event):
           selectedServer += 1
         pressed = True
 
-      if keyboard_event.scan_code == 75: #left
+      if keyboard_event.scan_code == 105 or keyboard_event.scan_code == 75: #left
         if selectedCommand > 0:
           selectedCommand -= 1
 
@@ -746,7 +754,7 @@ def my_keyboard_hook(keyboard_event):
           selectedLoginCommand -= 1
         pressed = True
 
-      if keyboard_event.scan_code == 77: #right
+      if keyboard_event.scan_code == 106 or keyboard_event.scan_code == 77: #right
         if selectedCommand < len(commands) - 1:
           selectedCommand += 1
 
@@ -760,7 +768,7 @@ def my_keyboard_hook(keyboard_event):
 
 
 def main():
-  os.system('cls')
+  os.system('clear')
   global enter
   global pressed
   global serverMessage
@@ -798,9 +806,7 @@ def main():
       pressed = False
 
       if selectedLoginCommand == 0 and enter == True:
-        while msvcrt.kbhit():
-          msvcrt.getch()
-        sys.stdin.flush()
+        flushInput()
         usernameL = input("\nUsername: ")
         print()
         passwordL = stdiomask.getpass(mask='*')
@@ -809,9 +815,7 @@ def main():
         enter = False
 
       elif selectedLoginCommand == 1 and enter == True:
-        while msvcrt.kbhit():
-          msvcrt.getch()
-        sys.stdin.flush()
+        flushInput()
         usernameL = input("\nUsername: ")
         print()
         passwordL = stdiomask.getpass(mask='*')
@@ -820,9 +824,7 @@ def main():
         enter = False
 
       elif selectedLoginCommand == 2 and enter == True:
-        while msvcrt.kbhit():
-          msvcrt.getch()
-        sys.stdin.flush()
+        flushInput()
         usernameL = input("\nUsername: ")
         print()
         passwordL = stdiomask.getpass(mask='*')
@@ -831,9 +833,7 @@ def main():
         enter = False
         
       elif selectedLoginCommand == 3 and enter == True:
-        while msvcrt.kbhit():
-          msvcrt.getch()
-        sys.stdin.flush()
+        flushInput()
         usernameL = input("\nUsername: ")
         print()
         passwordL = stdiomask.getpass(mask='*')
@@ -843,7 +843,7 @@ def main():
       elif selectedLoginCommand == 4 and enter == True:
         running = False
 
-      os.system('cls')
+      os.system('clear')
 
     # SERVER LOGIN
 
@@ -859,9 +859,7 @@ def main():
       if enter == True:
         serverMessage = ""
         if selectedServer == 0:
-          while msvcrt.kbhit():
-            msvcrt.getch()
-          sys.stdin.flush()
+          flushInput()
           serverName = input("\nServer Name: ")
           serverName = serverName.lower()
           print()
@@ -886,9 +884,7 @@ def main():
 
 
         else:
-          while msvcrt.kbhit():
-            msvcrt.getch()
-          sys.stdin.flush()
+          flushInput()
           print()
           serverPassword = stdiomask.getpass(mask='*')
           if loginServer(serverPassword):
@@ -899,7 +895,7 @@ def main():
             selectedMod = 0
             # getMods()
 
-      os.system('cls')
+      os.system('clear')
 
     # MOD MANAGEMENT
 
@@ -941,8 +937,11 @@ def main():
       # delete mod
       elif selectedCommand == 2 and enter == True:
         serverMessage = ""
+        flushInput()
+        choice = input("Are you sure? [Yes/No]: ")
         enter = False
-        deleteMod(modList[selectedMod])
+        if choice == "Yes" or choice == "yes" or choice == "ye" or choice == "y":
+          deleteMod(modList[selectedMod])
 
       # change server
       elif selectedCommand == 3 and enter == True:
@@ -954,11 +953,14 @@ def main():
       # delete server
       elif selectedCommand == 4 and enter == True:
         serverMessage = ""
+        flushInput()
+        choice = input("Are you sure? [Yes/No]: ")
         enter = False
-        if deleteServer():
-          serverLoggedIn = False
-          serverOwner = False
-          upToDateServer = False
+        if choice == "Yes" or choice == "yes" or choice == "ye" or choice == "y":
+          if deleteServer():
+            serverLoggedIn = False
+            serverOwner = False
+            upToDateServer = False
 
       # logout
       elif selectedCommand == 5 and enter == True:
@@ -977,7 +979,7 @@ def main():
         enter = False
         running = False
         
-      os.system('cls')
+      os.system('clear')
 
 
 main()

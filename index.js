@@ -280,7 +280,7 @@ app.post('/users', (req, resp) => {
   // store the new user in the 'logins' map
   logins.set(user, {salt: saltCounter.toString(), hash: hash});
 
-  console.log(h.hex(), saltCounter);
+  // console.log(h.hex(), saltCounter);
   // increase the salt counter
   saltCounter++;
 

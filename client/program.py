@@ -13,6 +13,8 @@ from tkinter.filedialog import askopenfilename
 url = "https://projectpdgt.herokuapp.com"
 # url = "http://localhost:2000"
 
+operatingSystem = ""
+
 serverCurrent = ""
 
 modList = []
@@ -54,11 +56,21 @@ serverOwner = False
 def flushInput():
   try:
     import sys, termios
+    operatingSystem = "linux"
     termios.tcflush(sys.stdin, termios.TCIOFLUSH)
   except ImportError:
     import msvcrt
+    operatingSystem = "windows"
     while msvcrt.kbhit():
         msvcrt.getch()
+
+def clear():
+  global operatingSystem
+  if operatingSystem == "linux":
+    os.system('clear')
+  else:
+    os.system('cls')
+
 
 def login(usernameL, passwordL):
   global username
@@ -768,7 +780,8 @@ def my_keyboard_hook(keyboard_event):
 
 
 def main():
-  os.system('clear')
+  flushInput()
+  clear()
   global enter
   global pressed
   global serverMessage
@@ -843,7 +856,7 @@ def main():
       elif selectedLoginCommand == 4 and enter == True:
         running = False
 
-      os.system('clear')
+      clear()
 
     # SERVER LOGIN
 
@@ -895,7 +908,7 @@ def main():
             selectedMod = 0
             # getMods()
 
-      os.system('clear')
+      clear()
 
     # MOD MANAGEMENT
 
@@ -979,7 +992,7 @@ def main():
         enter = False
         running = False
         
-      os.system('clear')
+      clear()
 
 
 main()

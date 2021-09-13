@@ -10,10 +10,15 @@ from termcolor import colored
 from tkinter import Tk     # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
 
-url = "https://projectpdgt.herokuapp.com"
-# url = "http://localhost:2000"
+try:
+  import sys, termios
+  operatingSystem = "linux"
+except ImportError:
+  import msvcrt
+  operatingSystem = "windows"
 
-operatingSystem = ""
+# url = "https://projectpdgt.herokuapp.com"
+url = "http://localhost:2000"
 
 serverCurrent = ""
 
@@ -54,15 +59,14 @@ serverOwner = False
 
 
 def flushInput():
-  try:
-    import sys, termios
-    operatingSystem = "linux"
+  global operatingSystem
+
+  if operatingSystem == "linux":
     termios.tcflush(sys.stdin, termios.TCIOFLUSH)
-  except ImportError:
-    import msvcrt
-    operatingSystem = "windows"
+  
+  else:
     while msvcrt.kbhit():
-        msvcrt.getch()
+      msvcrt.getch()
 
 def clear():
   global operatingSystem
@@ -742,7 +746,7 @@ def my_keyboard_hook(keyboard_event):
     # print("Scan code:", keyboard_event.scan_code)
     # print("Time:", keyboard_event.time)
     if pressed == False:
-      if keyboard_event.scan_code == 103 or keyboard_event.scan_code == 72: #up
+      if keyboard_event.scan_code == 103 and operatingSystem == "linux" or keyboard_event.scan_code == 72 and operatingSystem == "windows": #up
         if selectedMod > 0:
           selectedMod -= 1
 
@@ -750,7 +754,7 @@ def my_keyboard_hook(keyboard_event):
           selectedServer -= 1
         pressed = True
 
-      if keyboard_event.scan_code == 108 or keyboard_event.scan_code == 80: #down
+      if keyboard_event.scan_code == 108 and operatingSystem == "linux" or keyboard_event.scan_code == 80 and operatingSystem == "windows": #down
         if selectedMod < len(modList) - 1:
           selectedMod += 1
 
@@ -758,7 +762,7 @@ def my_keyboard_hook(keyboard_event):
           selectedServer += 1
         pressed = True
 
-      if keyboard_event.scan_code == 105 or keyboard_event.scan_code == 75: #left
+      if keyboard_event.scan_code == 105 and operatingSystem == "linux" or keyboard_event.scan_code == 75 and operatingSystem == "windows": #left
         if selectedCommand > 0:
           selectedCommand -= 1
 
@@ -766,7 +770,7 @@ def my_keyboard_hook(keyboard_event):
           selectedLoginCommand -= 1
         pressed = True
 
-      if keyboard_event.scan_code == 106 or keyboard_event.scan_code == 77: #right
+      if keyboard_event.scan_code == 106 and operatingSystem == "linux" or keyboard_event.scan_code == 77 and operatingSystem == "windows": #right
         if selectedCommand < len(commands) - 1:
           selectedCommand += 1
 
@@ -780,7 +784,6 @@ def my_keyboard_hook(keyboard_event):
 
 
 def main():
-  flushInput()
   clear()
   global enter
   global pressed
@@ -811,14 +814,13 @@ def main():
     if not loggedIn:
 
       printLoginCommands()
-
-      serverMessage = ""
       
       while not pressed and not enter:
         pass
       pressed = False
 
       if selectedLoginCommand == 0 and enter == True:
+        serverMessage = ""
         flushInput()
         usernameL = input("\nUsername: ")
         print()
@@ -828,6 +830,7 @@ def main():
         enter = False
 
       elif selectedLoginCommand == 1 and enter == True:
+        serverMessage = ""
         flushInput()
         usernameL = input("\nUsername: ")
         print()
@@ -837,6 +840,7 @@ def main():
         enter = False
 
       elif selectedLoginCommand == 2 and enter == True:
+        serverMessage = ""
         flushInput()
         usernameL = input("\nUsername: ")
         print()
@@ -846,6 +850,7 @@ def main():
         enter = False
         
       elif selectedLoginCommand == 3 and enter == True:
+        serverMessage = ""
         flushInput()
         usernameL = input("\nUsername: ")
         print()
@@ -855,6 +860,7 @@ def main():
 
       elif selectedLoginCommand == 4 and enter == True:
         running = False
+        flushInput()
 
       clear()
 
@@ -991,6 +997,7 @@ def main():
       elif selectedCommand == 6 and enter == True:
         enter = False
         running = False
+        flushInput()
         
       clear()
 

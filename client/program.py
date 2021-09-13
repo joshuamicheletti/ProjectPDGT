@@ -17,8 +17,8 @@ except ImportError:
   import msvcrt
   operatingSystem = "windows"
 
-# url = "https://projectpdgt.herokuapp.com"
-url = "http://localhost:2000"
+url = "https://projectpdgt.herokuapp.com"
+# url = "http://localhost:2000"
 
 serverCurrent = ""
 
@@ -961,6 +961,7 @@ def main():
         enter = False
         if choice == "Yes" or choice == "yes" or choice == "ye" or choice == "y":
           deleteMod(modList[selectedMod])
+          selectedMod = 0
 
       # change server
       elif selectedCommand == 3 and enter == True:

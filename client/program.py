@@ -17,8 +17,8 @@ except ImportError:
   import msvcrt
   operatingSystem = "windows"
 
-# url = "https://projectpdgt.herokuapp.com"
-url = "http://localhost:2000"
+url = "https://projectpdgt.herokuapp.com"
+# url = "http://localhost:2000"
 
 serverCurrent = ""
 
@@ -59,8 +59,6 @@ serverOwner = False
 
 
 def flushInput():
-  global operatingSystem
-
   if operatingSystem == "linux":
     termios.tcflush(sys.stdin, termios.TCIOFLUSH)
   
@@ -69,43 +67,58 @@ def flushInput():
       msvcrt.getch()
 
 def clear():
-  global operatingSystem
   if operatingSystem == "linux":
     os.system('clear')
   else:
     os.system('cls')
 
+def readCookie():
+  try:
+    cookieFile = open("cookie.txt", "r")
+    cookie = cookieFile.read()
+    cookieFile.close()
+    return(cookie)
+  except IOError:
+    return(False)
+
+def encodeBase64(username, password):
+  if username != "" and password != "":
+    credentials = username + ":" + password
+    credentials_bytes = credentials.encode('ascii')
+    base64_bytes = base64.b64encode(credentials_bytes)
+    base64_message = base64_bytes.decode('ascii')
+    return(base64_message)
+  else:
+    return(False)
+
+
 
 def login(usernameL, passwordL):
-  global username
   global serverMessage
   global username
   global password
 
-  credentials = usernameL + ":" + passwordL
-  credentials_bytes = credentials.encode('ascii')
-  base64_bytes = base64.b64encode(credentials_bytes)
-  base64_message = base64_bytes.decode('ascii')
+  if encodeBase64(usernameL, passwordL):
 
-  headers = {
-    'Authorization': 'Basic ' + base64_message
-  }
+    headers = {
+      'Authorization': 'Basic ' + encodeBase64(usernameL, passwordL)
+    }
 
-  r = requests.get(url + '/secret', headers = headers)
+    r = requests.get(url + '/secret', headers = headers)
 
-  if r.status_code == 200:
-    username = r.text
-    username = usernameL
-    password = passwordL
-    serverMessage = ""
-    return True
-    
-  else:
-    serverMessage = r.text
-    return False
+    if r.status_code == 200:
+      username = usernameL
+      password = passwordL
+      serverMessage = ""
+      return True
+      
+    else:
+      serverMessage = r.text
+      return False
+
+  return False
 
 def loginCookie(usernameL, passwordL):
-  global username
   global serverMessage
   global username
   global password
@@ -113,7 +126,6 @@ def loginCookie(usernameL, passwordL):
   r = requests.post(url + '/login?username=' + usernameL + '&password=' + passwordL)
 
   if r.status_code == 200:
-    username = r.text
     try:
       cookieFile = open("cookie.txt", "x")
       cookieFile.write(r.cookies["auth"])
@@ -155,50 +167,44 @@ def loginWithoutCredentials():
 def register(usernameL, passwordL):
   global serverMessage
   global username
-  global username
   global password
 
-  credentials = usernameL + ":" + passwordL
-  credentials_bytes = credentials.encode('ascii')
-  base64_bytes = base64.b64encode(credentials_bytes)
-  base64_message = base64_bytes.decode('ascii')
+  if encodeBase64(usernameL, passwordL):
+    headers = {
+      'Authorization': 'Basic ' + encodeBase64(usernameL, passwordL)
+    }
 
-  headers = {
-    'Authorization': 'Basic ' + base64_message
-  }
+    r = requests.post(url + '/users', headers = headers)
 
-  r = requests.post(url + '/users', headers = headers)
+    if r.status_code == 200:
+      username = usernameL
+      password = passwordL
+      serverMessage = ""
+      return True
+    else:
+      serverMessage = r.text
+      return False
+  
+  return False
 
-  if r.status_code == 200:
-    username = r.text
-    username = usernameL
-    password = passwordL
-    serverMessage = ""
-    return True
-  else:
-    serverMessage = r.text
-    return False
-
-def deleteUser(username, password):
+def deleteUser(usernameL, passwordL):
   global serverMessage
 
-  credentials = username + ":" + password
-  credentials_bytes = credentials.encode('ascii')
-  base64_bytes = base64.b64encode(credentials_bytes)
-  base64_message = base64_bytes.decode('ascii')
+  if encodeBase64(usernameL, passwordL):
+    headers = {
+      'Authorization': 'Basic ' + encodeBase64(usernameL, passwordL)
+    }
 
-  headers = {
-    'Authorization': 'Basic ' + base64_message
-  }
+    r = requests.delete(url + '/users', headers = headers)
 
-  r = requests.delete(url + '/users', headers = headers)
-
-  if r.status_code == 200:
-    serverMessage = r.text
-    return True
-  else:
-    serverMessage = r.text
-    return False
+    if r.status_code == 200:
+      serverMessage = r.text
+      return True
+    else:
+      serverMessage = r.text
+      return False
+  
+  return False
 
 
 def printMods():
@@ -261,8 +267,6 @@ def getMods():
   global modList
   global upToDate
   global serverMessage
-  global serverCurrent
-  global currentServerPassword
 
   r = requests.request("GET", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword)
 
@@ -369,12 +373,11 @@ def createServer(serverName, serverPassword):
   global currentServerPassword
   global serverOwner
 
-  try:
-    cookieFile = open("cookie.txt", "r")
+  if readCookie():
     headers = {
-      'Cookie': 'auth=' + cookieFile.read()
+      'Cookie': 'auth=' + readCookie()
     }
-    cookieFile.close()
+
     r = requests.post(url + "/servers" + "?serverName=" + serverName + "&serverPassword=" + serverPassword, headers = headers)
 
     if r.status_code == 200:
@@ -385,15 +388,10 @@ def createServer(serverName, serverPassword):
     else:
       serverMessage = r.text
       return False
-
-  except IOError:
-    credentials = username + ":" + password
-    credentials_bytes = credentials.encode('ascii')
-    base64_bytes = base64.b64encode(credentials_bytes)
-    base64_message = base64_bytes.decode('ascii')
-
+  
+  if encodeBase64(username, password):
     headers = {
-      'Authorization': 'Basic ' + base64_message
+      'Authorization': 'Basic ' + encodeBase64(username, password)
     }
 
     r = requests.post(url + "/servers" + "?serverName=" + serverName + "&serverPassword=" + serverPassword, headers = headers)
@@ -407,6 +405,8 @@ def createServer(serverName, serverPassword):
     else:
       serverMessage = r.text
       return False
+
+  return False
 
 def deleteServer():
   global serverCurrent
@@ -415,31 +415,9 @@ def deleteServer():
   global serverMessage
   global upToDateServer
 
-  try:
-    cookieFile = open("cookie.txt", "r")
+  if readCookie():
     headers = {
-      'Cookie': 'auth=' + cookieFile.read()
-    }
-    cookieFile.close()
-    r = requests.delete(url + "/servers" + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
-
-    if r.status_code == 200:
-      serverCurrent = ""
-      currentServerPassword = ""
-      serverOwner = False
-      return True
-    else:
-      serverMessage = r.text
-      return False
-
-  except IOError:
-    credentials = username + ":" + password
-    credentials_bytes = credentials.encode('ascii')
-    base64_bytes = base64.b64encode(credentials_bytes)
-    base64_message = base64_bytes.decode('ascii')
-
-    headers = {
-      'Authorization': 'Basic ' + base64_message
+      'Cookie': 'auth=' + readCookie()
     }
 
     r = requests.delete(url + "/servers" + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
@@ -453,6 +431,25 @@ def deleteServer():
     else:
       serverMessage = r.text
       return False
+
+  if encodeBase64(username, password):
+    headers = {
+      'Authorization': 'Basic ' + encodeBase64(username, password)
+    }
+
+    r = requests.delete(url + "/servers" + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
+
+    if r.status_code == 200:
+      serverCurrent = ""
+      currentServerPassword = ""
+      serverOwner = False
+      upToDateServer = False
+      return True
+    else:
+      serverMessage = r.text
+      return False
+
+  return False
 
 def loginServer(serverPassword):
   global serverList
@@ -476,10 +473,10 @@ def loginServer(serverPassword):
     return False
 
 
+
+
 def uploadMod(path):
   global serverMessage
-  global serverCurrent
-  global currentServerPassword
   global upToDate
 
   splitString = path.split("/")
@@ -487,86 +484,51 @@ def uploadMod(path):
 
   payload = {}
 
-  files=[
+  files = [
     ('avatar',(filename, open(path,'rb'),'application/java-archive'))
   ]
 
-  try:
-    cookieFile = open("cookie.txt", "r")
+  if readCookie():
     headers = {
-      'Cookie': 'auth=' + cookieFile.read()
+      'Cookie': 'auth=' + readCookie()
     }
-    cookieFile.close()
+
     r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
 
     if r.status_code == 200:
       upToDate = False
       return True
 
-    elif r.status_code == 403:
+    else:
       serverMessage = r.text
       return False
-      
+
+  if encodeBase64(username, password):
+    headers = {
+      'Authorization': 'Basic ' + encodeBase64(username, password)
+    }
+
+    r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
+
+    if r.status_code == 200:
+      upToDate = False
+      return True
     else:
-      if username != "" and password != "":
-        credentials = username + ":" + password
-        credentials_bytes = credentials.encode('ascii')
-        base64_bytes = base64.b64encode(credentials_bytes)
-        base64_message = base64_bytes.decode('ascii')
-
-        headers = {
-          'Authorization': 'Basic ' + base64_message
-        }
-
-        r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
-
-        if r.status_code == 200:
-          upToDate = False
-          return True
-        else:
-          serverMessage = r.text
-          return False
-
-      else:
-        return False
-      
-
-  except IOError:
-    if username != "" and password != "":
-      credentials = username + ":" + password
-      credentials_bytes = credentials.encode('ascii')
-      base64_bytes = base64.b64encode(credentials_bytes)
-      base64_message = base64_bytes.decode('ascii')
-
-      headers = {
-        'Authorization': 'Basic ' + base64_message
-      }
-
-      r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
-
-      if r.status_code == 200:
-        upToDate = False
-        return True
-      else:
-        serverMessage = r.text
-        return False
-    
-    else:
+      serverMessage = r.text
       return False
+
+  return False
 
 def downloadMod(modName):
   global serverMessage
-  global serverCurrent
-  global currentServerPassword
 
   downloadPath = "./download/"
 
-  try:
-    cookieFile = open("cookie.txt", "r")
+  if readCookie():
     headers = {
-      'Cookie': 'auth=' + cookieFile.read()
+      'Cookie': 'auth=' + readCookie()
     }
-    cookieFile.close()
+
     r = requests.request("GET", url + '/download' + "?mod=" + modName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
     if r.status_code == 200:
@@ -581,167 +543,78 @@ def downloadMod(modName):
       finally:
         return True
     
-    elif r.status_code == 404:
+    else:
+      serverMessage = r.text
+      return False
+  
+  if encodeBase64(username, password):
+    headers = {
+      'Authorization': 'Basic ' + encodeBase64(username, password)
+    }
+
+    r = requests.request("GET", url + '/download' + "?mod=" + modName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
+    
+    if r.status_code == 200:
+      try:
+        file = open(downloadPath + modName, "xb")
+        file.write(r.content)
+
+      except IOError:
+        file = open(downloadPath + modName, "wb")
+        file.write(r.content)
+      
+      finally:
+        return True
+
+    else:
       serverMessage = r.text
       return False
 
-    else:
-      if username != "" and password != "":
-        credentials = username + ":" + password
-        credentials_bytes = credentials.encode('ascii')
-        base64_bytes = base64.b64encode(credentials_bytes)
-        base64_message = base64_bytes.decode('ascii')
-
-        headers = {
-          'Authorization': 'Basic ' + base64_message
-        }
-
-        r = requests.request("GET", url + '/download' + "?mod=" + modName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
-
-        if r.status_code == 200:
-          try:
-            file = open(downloadPath + modName, "xb")
-            file.write(r.content)
-
-          except IOError:
-            file = open(downloadPath + modName, "wb")
-            file.write(r.content)
-          
-          finally:
-            return True
-
-        else:
-          serverMessage = r.text
-          return False
-
-      else:
-        return False
-
-  except IOError:
-      if username != "" and password != "":
-        credentials = username + ":" + password
-        credentials_bytes = credentials.encode('ascii')
-        base64_bytes = base64.b64encode(credentials_bytes)
-        base64_message = base64_bytes.decode('ascii')
-
-        headers = {
-          'Authorization': 'Basic ' + base64_message
-        }
-
-        r = requests.request("GET", url + '/download' + "?mod=" + modName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
-
-        if r.status_code == 200:
-          try:
-            file = open(downloadPath + modName, "xb")
-            file.write(r.content)
-
-          except IOError:
-            file = open(downloadPath + modName, "wb")
-            file.write(r.content)
-          
-          finally:
-            return True
-            
-        else:
-          serverMessage = r.text
-          return False
-
-      else:
-        return False
-
-
-
-  # r = requests.request("GET", url + '/download' + "?mod=" + modName)
-  # # print(r.status_code)
-
-  # # downloadPath = "C:/Users/Joshua/AppData/Roaming/.minecraft/mods/"
-  
-
-  # try:
-  #   file = open(downloadPath + modName, "xb")
-  #   file.write(r.content)
-
-  # except IOError:
-  #   file = open(downloadPath + modName, "wb")
-  #   file.write(r.content)
+  return False
 
 def deleteMod(modName):
   global upToDate
   global serverMessage
-  global serverCurrent
-  global currentServerPassword
 
-  try:
-    cookieFile = open("cookie.txt", "r")
+  if readCookie():
     headers = {
-      'Cookie': 'auth=' + cookieFile.read()
+      'Cookie': 'auth=' + readCookie()
     }
-    cookieFile.close()
+
     r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&modName=" + modName, headers = headers)
 
     if r.status_code == 200:
       upToDate = False
       return True
 
-    elif r.status_code == 403:
+    else:
       serverMessage = r.text
       return False
-      
+
+  if encodeBase64(username, password):
+    headers = {
+      'Authorization': 'Basic ' + encodeBase64(username, password)
+    }
+
+    r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&modName=" + modName, headers = headers)
+
+    if r.status_code == 200:
+      upToDate = False
+      return True
     else:
-      if username != "" and password != "":
-        credentials = username + ":" + password
-        credentials_bytes = credentials.encode('ascii')
-        base64_bytes = base64.b64encode(credentials_bytes)
-        base64_message = base64_bytes.decode('ascii')
-
-        headers = {
-          'Authorization': 'Basic ' + base64_message
-        }
-
-        r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&modName=" + modName, headers = headers)
-
-        if r.status_code == 200:
-          upToDate = False
-          return True
-        else:
-          serverMessage = r.text
-          return False
-
-      else:
-        return False
-      
-
-  except IOError:
-    if username != "" and password != "":
-      credentials = username + ":" + password
-      credentials_bytes = credentials.encode('ascii')
-      base64_bytes = base64.b64encode(credentials_bytes)
-      base64_message = base64_bytes.decode('ascii')
-
-      headers = {
-        'Authorization': 'Basic ' + base64_message
-      }
-
-      r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&modName=" + modName, headers = headers)
-
-      if r.status_code == 200:
-        upToDate = False
-        return True
-      else:
-        serverMessage = r.text
-        return False
-    
-    else:
+      serverMessage = r.text
       return False
+
+  return False
 
 def my_keyboard_hook(keyboard_event):
     global selectedMod
-    global pressed
     global selectedCommand
+    global selectedServer
+    global pressed
     global enter
     global selectedLoginCommand
-    global loginCommands
-    global selectedServer
+    
     # print("Name:", keyboard_event.name)
     # print("Scan code:", keyboard_event.scan_code)
     # print("Time:", keyboard_event.time)
@@ -785,13 +658,11 @@ def my_keyboard_hook(keyboard_event):
 
 def main():
   clear()
+
   global enter
   global pressed
   global serverMessage
-  global username
-  global password
   global upToDateServer
-  global serverCurrent
   global upToDate
   global serverOwner
   global modList
@@ -810,7 +681,6 @@ def main():
       print(colored(serverMessage + "\n", 'yellow'))
 
     # LOGIN
-
     if not loggedIn:
 
       printLoginCommands()
@@ -819,6 +689,7 @@ def main():
         pass
       pressed = False
 
+      # login
       if selectedLoginCommand == 0 and enter == True:
         serverMessage = ""
         flushInput()
@@ -829,6 +700,7 @@ def main():
           loggedIn = True
         enter = False
 
+      # login with cookie
       elif selectedLoginCommand == 1 and enter == True:
         serverMessage = ""
         flushInput()
@@ -839,6 +711,7 @@ def main():
           loggedIn = True
         enter = False
 
+      # register
       elif selectedLoginCommand == 2 and enter == True:
         serverMessage = ""
         flushInput()
@@ -848,7 +721,8 @@ def main():
         if register(usernameL, passwordL):
           loggedIn = True
         enter = False
-        
+
+      # delete 
       elif selectedLoginCommand == 3 and enter == True:
         serverMessage = ""
         flushInput()
@@ -858,6 +732,7 @@ def main():
         deleteUser(usernameL, passwordL)
         enter = False
 
+      # close
       elif selectedLoginCommand == 4 and enter == True:
         running = False
         flushInput()
@@ -865,7 +740,6 @@ def main():
       clear()
 
     # SERVER LOGIN
-
     elif not serverLoggedIn:
       print("User: " + username)
 
@@ -877,6 +751,8 @@ def main():
       
       if enter == True:
         serverMessage = ""
+
+        # New server
         if selectedServer == 0:
           flushInput()
           serverName = input("\nServer Name: ")
@@ -891,6 +767,7 @@ def main():
             upToDate = False
             selectedMod = 0
 
+        # Logout
         elif selectedServer == len(serverList) + 1:
           enter = False
           loggedIn = False
@@ -901,7 +778,7 @@ def main():
           except IOError:
             print("No cookie to remove")
 
-
+        # Login server
         else:
           flushInput()
           print()
@@ -917,7 +794,6 @@ def main():
       clear()
 
     # MOD MANAGEMENT
-
     else:
       if serverOwner:
         print("User:", colored(username, 'cyan'))
@@ -955,12 +831,16 @@ def main():
 
       # delete mod
       elif selectedCommand == 2 and enter == True:
-        serverMessage = ""
-        flushInput()
-        choice = input("Are you sure? [Yes/No]: ")
-        enter = False
-        if choice == "Yes" or choice == "yes" or choice == "ye" or choice == "y":
-          deleteMod(modList[selectedMod])
+        if len(modList) == 0:
+          serverMessage = "No mod to delete!"
+          enter = False
+        else:
+          serverMessage = ""
+          flushInput()
+          choice = input("Are you sure? [Yes/No]: ")
+          enter = False
+          if choice == "Yes" or choice == "yes" or choice == "ye" or choice == "y":
+            deleteMod(modList[selectedMod])
 
       # change server
       elif selectedCommand == 3 and enter == True:
@@ -1002,4 +882,5 @@ def main():
       clear()
 
 
-main()
+if __name__ == "__main__":
+  main()

@@ -313,7 +313,7 @@ app.delete('/users', (req, resp) => {
   }
 
   // encode the password in the request to sha256
-  var hash = encodeSaltPasswordSha256(logins.get(user).salt + password);
+  var hash = encodeSaltPasswordSha256(logins.get(user).salt, password);
 
   // check if the password matches the one saved in the account
   if (hash != logins.get(user).hash) {
@@ -861,10 +861,10 @@ app.delete('/servers', (req, res) => {
 
 
 // listen for requests :)
-//const listener = app.listen(process.env.PORT, () => {
-//  console.log("Your app is listening on port " + listener.address().port);
-//});
-
-const listener = app.listen(2000, () => {
-  console.log("Your app is listening on port " + listener.address().port);
+const listener = app.listen(process.env.PORT, () => {
+ console.log("Your app is listening on port " + listener.address().port);
 });
+
+// const listener = app.listen(2000, () => {
+//   console.log("Your app is listening on port " + listener.address().port);
+// });

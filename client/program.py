@@ -831,6 +831,7 @@ def main():
 
       # delete mod
       elif selectedCommand == 2 and enter == True:
+<<<<<<< HEAD
         if len(modList) == 0:
           serverMessage = "No mod to delete!"
           enter = False
@@ -841,6 +842,15 @@ def main():
           enter = False
           if choice == "Yes" or choice == "yes" or choice == "ye" or choice == "y":
             deleteMod(modList[selectedMod])
+=======
+        serverMessage = ""
+        flushInput()
+        choice = input("Are you sure? [Yes/No]: ")
+        enter = False
+        if choice == "Yes" or choice == "yes" or choice == "ye" or choice == "y":
+          deleteMod(modList[selectedMod])
+          selectedMod = 0
+>>>>>>> 4b5c7d9356865ce9932b7a83b40c4bf2eaf4d9ea
 
       # change server
       elif selectedCommand == 3 and enter == True:

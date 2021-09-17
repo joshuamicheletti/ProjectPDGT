@@ -93,6 +93,22 @@ function encodeSaltPasswordSha256(salt, password) {
   return(h.hex());
 }
 
+// function to obtain the username from the request, either from the cookie or from the auth headers
+function obtainUser(req) {
+  // obtain the username from the request
+  if (req.cookies.auth) {
+    // get the username from the cookie map
+    var username = cookies.get(req.cookies.auth);
+  } else if (req.headers.authorization) {
+    // decode the authorization header
+    const [login, password] = decodeBase64(req.headers.authorization);
+    // get the username from the request
+    var username = login;
+  }
+
+  return(username);
+}
+
 // map for storing login info (username, password (salt + hash))
 const logins = new Map();
 
@@ -187,6 +203,7 @@ function attemptAuth(req) {
   // attempt a login with the authorization header credentials
   return attemptLogin(login, password);
 }
+
 
 // HTTP REQUESTS MANAGEMENT
 
@@ -335,7 +352,7 @@ app.delete('/users', (req, resp) => {
   });
 });
 
-// post /upload to upload a single mod to a server
+// post /upload to upload a single file to a server
 app.post('/upload', upload.single('avatar'), (req, res) => {
   // check if the request has info about the target server
   if (!req.query.serverName || !req.query.serverPassword) {
@@ -370,30 +387,22 @@ app.post('/upload', upload.single('avatar'), (req, res) => {
   }
   
   // obtain the username from the request
-  if (req.cookies.auth) {
-    // get the username from the cookie map
-    var username = cookies.get(req.cookies.auth);
-  } else if (req.headers.authorization) {
-    // decode the authorization header
-    const [login, password] = decodeBase64(req.headers.authorization);
-    // get the username from the request
-    var username = login;
-  }
+  var username = obtainUser(req);
 
   // check if the upload user is the server owner (aka allowed to upload)
   if (servers.get(req.query.serverName).owner != username) {
-    res.status(403).send("Not allowed to upload mods").end();
+    res.status(403).send("Not allowed to upload files").end();
     return false;
   }
 
-  // output for storing the list of mods
+  // output for storing the list of files
   const output = [];
 
-  // get the list of mods in the server
+  // get the list of files in the server
   var stream = minioClient.listObjects(req.query.serverName);
   console.log("got the stream");
 
-  // store the mod names in 'output'
+  // store the file names in 'output'
   stream.on('data', function(obj) {
     console.log("pushed obj to output");
     output.push(obj.name);
@@ -407,16 +416,16 @@ app.post('/upload', upload.single('avatar'), (req, res) => {
 
   // once we have all the data from the stream
   stream.on('end', function() {
-    // check if the mod we're trying to upload already exists
+    // check if the file we're trying to upload already exists
     for (var i = 0; i < output.length; i++) {
       if (req.file.originalname == output[i]) {
-        res.status(400).send("Mod already exists").end();
+        res.status(400).send("File already exists").end();
         return;
       }
     }
 
     console.log("putting object in bucket");
-    // put the uploaded mod in the bucket of the server
+    // put the uploaded file in the bucket of the server
     minioClient.putObject(req.query.serverName, req.file.originalname, req.file.buffer, function(error, etag) {
       console.log("finished putting object");
       // check for Minio errors
@@ -424,13 +433,13 @@ app.post('/upload', upload.single('avatar'), (req, res) => {
         res.status(400).send("Minio Error").end();
         return console.log(error);
       } else {
-        res.status(200).send("Mod succesfully uploaded").end();
+        res.status(200).send("File succesfully uploaded").end();
       }
     });
   });
 });
 
-// get /upload to get a list of the mods in a server
+// get /upload to get a list of the files in a server
 app.get('/upload', (req, res) => {
   if (!req.query.serverName || !req.query.serverPassword) {
     res.status(400).send("No server info").end();
@@ -444,10 +453,10 @@ app.get('/upload', (req, res) => {
     return false;
   }
 
-  // variable for storing the list of mods
+  // variable for storing the list of files
   const output = [];
   
-  // get the list of mods from the bucket into a stream
+  // get the list of files from the bucket into a stream
   var stream = minioClient.listObjects(req.query.serverName);
 
   // read all the objects in the bucket and store them in 'output'
@@ -469,7 +478,7 @@ app.get('/upload', (req, res) => {
   });
 });
 
-// delete /upload to delete a mod in a server
+// delete /upload to delete a file in a server
 app.delete('/upload', (req, res) => {
   // check if the user is a valid logged in user
   if (!attemptAuth(req)) {
@@ -498,37 +507,29 @@ app.delete('/upload', (req, res) => {
   }
 
   // obtain the username from the request
-  if (req.cookies.auth) {
-    // get the username from the cookie map
-    var username = cookies.get(req.cookies.auth);
-  } else if (req.headers.authorization) {
-    // decode the authorization header
-    const [login, password] = decodeBase64(req.headers.authorization);
-    // get the username from the request
-    var username = login;
-  }
+  var username = obtainUser(req);
 
   // check if the user is the server owner
   if (username != servers.get(req.query.serverName).owner) {
-    res.status(400).send("Not allowed to delete mods").end();
+    res.status(400).send("Not allowed to delete files").end();
     return;
   }
 
-  // check if the request contains a mod name
-  if (!req.query.modName) {
-    res.status(400).send("No mod info").end();
+  // check if the request contains a file name
+  if (!req.query.fileName) {
+    res.status(400).send("No file info").end();
     return;
   }
 
-  // check if the mod exists in the server
+  // check if the file exists in the server
   var found = false;
   
-  // get the list of mods from the bucket into a stream
+  // get the list of files from the bucket into a stream
   var stream = minioClient.listObjects(req.query.serverName);
 
-  // read all the objects in the bucket and check when it finds the selected mod
+  // read all the objects in the bucket and check when it finds the selected file
   stream.on('data', function(obj) {
-    if (obj.name == req.query.modName) {
+    if (obj.name == req.query.fileName) {
       found = true;
     }
   });
@@ -539,27 +540,27 @@ app.delete('/upload', (req, res) => {
   });
   // once the stream is over
   stream.on('end', function() {
-    // if the selected mod was found
+    // if the selected file was found
     if (found) {
-      // remove the mod from the minio bucket
-      minioClient.removeObject(req.query.serverName, req.query.modName, function(err) {
+      // remove the file from the minio bucket
+      minioClient.removeObject(req.query.serverName, req.query.fileName, function(err) {
         // catch any error
         if (err) {
           res.status(400).send("Minio error").end();
           return console.log(err);
         } else {
-          res.status(200).send("Mod removed correctly").end();
+          res.status(200).send("File removed correctly").end();
           return;
         }
       });
     } else {
-      res.status(404).send("No mod with that name found").end();
+      res.status(404).send("No file with that name found").end();
       return;
     }
   });
 });
 
-// get /download to download the specified mod
+// get /download to download the specified file
 app.get('/download', (req, res) => {
   // check if the user is authorized
   if (!attemptAuth(req)) {
@@ -567,9 +568,9 @@ app.get('/download', (req, res) => {
     return false;
   }
 
-  // check if the request contains any mod name
-  if (!req.query.mod) {
-    res.status(400).send("Invalid Mod").end();
+  // check if the request contains any file name
+  if (!req.query.fileName) {
+    res.status(400).send("Invalid file").end();
     return false;
   }
 
@@ -585,17 +586,17 @@ app.get('/download', (req, res) => {
     return;
   }
 
-  const fileName = req.query.mod;
+  const fileName = req.query.fileName;
 
-  // get the list of mods
+  // get the list of files
   var bucketStream = minioClient.listObjects(req.query.serverName);
 
-  // variable for storing the mod names
-  const mods = [];
+  // variable for storing the file names
+  const files = [];
 
-  // store the mod names into 'mods'
+  // store the file names into 'files'
   bucketStream.on("data", function(obj) {
-    mods.push(obj.name);
+    files.push(obj.name);
   });
 
   // catch any error
@@ -603,23 +604,23 @@ app.get('/download', (req, res) => {
     console.log(error);
   });
 
-  // when the stream ends and we have all the mods list
+  // when the stream ends and we have all the files list
   bucketStream.on("end", function() {
-    // check if the mod we want to download exists in the mod list
+    // check if the file we want to download exists in the file list
     var found = false;
 
-    for (var i = 0; i < mods.length; i++) {
-      if (fileName == mods[i]) {
+    for (var i = 0; i < files.length; i++) {
+      if (fileName == files[i]) {
         found = true;
       }
     }
 
     if (!found) {
-      res.status(400).send("Mod not found").end();
+      res.status(400).send("file not found").end();
       return;
     }
 
-    // get the selected mod from the Minio server
+    // get the selected file from the Minio server
     minioClient.getObject(req.query.serverName, fileName, function(err, dataStream) {
       // catch any Minio error
       if (err) {
@@ -703,14 +704,7 @@ app.post('/servers', (req, resp) => {
   }
 
   // get the username (either from the cookie or the basic authorization)
-  var username;
-
-  if (req.cookies.auth) {
-    username = cookies.get(req.cookies.auth);
-  } else if (req.headers.authorization) {
-    const [login, password] = decodeBase64(req.headers.authorization);
-    username = login;
-  }
+  var username = obtainUser(req);
 
   // encode the new password in sha256 with the salt
   var hash = encodeSaltPasswordSha256(saltCounter.toString(), serverPassword);
@@ -728,7 +722,7 @@ app.post('/servers', (req, resp) => {
       resp.status(400).send("Minio Error").end();
       return console.log(error);
     } else {
-      // create a new minio bucket to store the mods of the new server
+      // create a new minio bucket to store the files of the new server
       minioClient.makeBucket(serverName, function(error) {
         // check for Minio errors
         if (error) {
@@ -769,19 +763,7 @@ app.delete('/servers', (req, res) => {
   }
 
   // obtain the username from the request headers
-  var username;
-
-  // obtain the username from a cookie
-  if (req.cookies.auth) {
-    // check if the cookie is stored in the cookie list
-    if (cookies.has(req.cookies.auth)) {
-      username = cookies.get(req.cookies.auth);
-    }
-  // obtain a username from Basic authorization
-  } else if (req.headers.authorization) {
-    const [login, password] = decodeBase64(req.headers.authorization);
-    username = login;
-  }
+  var username = obtainUser(req);
 
   // check if the request has server info
   if (!req.query.serverName || !req.query.serverPassword) {

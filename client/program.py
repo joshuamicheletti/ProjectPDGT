@@ -17,12 +17,14 @@ except ImportError:
   import msvcrt
   operatingSystem = "windows"
 
+Tk().withdraw()
+
 url = "https://projectpdgt.herokuapp.com"
 # url = "http://localhost:2000"
 
 serverCurrent = ""
 
-modList = []
+filesList = []
 
 serverList = []
 
@@ -32,9 +34,7 @@ upToDate = True
 
 upToDateServer = False
 
-Tk().withdraw()
-
-selectedMod = 0
+selectedFile = 0
 
 selectedCommand = 0
 
@@ -48,7 +48,7 @@ serverMessage = ""
 
 loginCommands = ["Login", "Login with Cookie", "Register", "Delete", "Close"]
 
-commands = ["Upload Mod", "Download Mod", "Delete Mod", "Change Server", "Delete Server", "Logout", "Close"]
+commands = ["Upload File", "Download File", "Delete File", "Change Server", "Delete Server", "Logout", "Close"]
 
 username = ""
 password = ""
@@ -57,42 +57,109 @@ currentServerPassword = ""
 
 serverOwner = False
 
-
+# function to flush the standard input, prevents unwanted input on commands
 def flushInput():
+  # if the operating system is linux
   if operatingSystem == "linux":
+    # flush using this function
     termios.tcflush(sys.stdin, termios.TCIOFLUSH)
-  
+  # if the operating system is windows
   else:
+    # flush using this function
     while msvcrt.kbhit():
       msvcrt.getch()
 
+# function to clear the screen
 def clear():
+  # if the operating system is linux
   if operatingSystem == "linux":
+    # clean the screen using this command
     os.system('clear')
+  # if the operating system is windows
   else:
+    # clean the screen using this command
     os.system('cls')
 
+# function to read the cookies file
 def readCookie():
+  # try to open the file to read the cookie
   try:
     cookieFile = open("cookie.txt", "r")
     cookie = cookieFile.read()
     cookieFile.close()
     return(cookie)
+  # in case the file doesn't exist or any other error occurs
   except IOError:
     return(False)
 
-def encodeBase64(username, password):
-  if username != "" and password != "":
-    credentials = username + ":" + password
+# function to encode username and password to base64
+def encodeBase64(usernameL, passwordL):
+  # check if the username and password to encode exist
+  if usernameL != "" and passwordL != "":
+    # combine the username and password as: "username:password"
+    credentials = usernameL + ":" + passwordL
+    # convert the composed string into bytes
     credentials_bytes = credentials.encode('ascii')
+    # encode the bytes into base64
     base64_bytes = base64.b64encode(credentials_bytes)
+    # convert the bytes into a string again
     base64_message = base64_bytes.decode('ascii')
+    # return the final base64 string
     return(base64_message)
   else:
     return(False)
 
+# function to handle keyboard inputs
+def keyboardEventHandler(keyboard_event):
+    global selectedFile
+    global selectedCommand
+    global selectedServer
+    global pressed
+    global enter
+    global selectedLoginCommand
+    
+    # print("Name:", keyboard_event.name)
+    # print("Scan code:", keyboard_event.scan_code)
+    # print("Time:", keyboard_event.time)
+    if pressed == False:
+      if keyboard_event.scan_code == 103 and operatingSystem == "linux" or keyboard_event.scan_code == 72 and operatingSystem == "windows": #up
+        if selectedFile > 0:
+          selectedFile -= 1
+
+        if selectedServer > 0:
+          selectedServer -= 1
+        pressed = True
+
+      if keyboard_event.scan_code == 108 and operatingSystem == "linux" or keyboard_event.scan_code == 80 and operatingSystem == "windows": #down
+        if selectedFile < len(filesList) - 1:
+          selectedFile += 1
+
+        if selectedServer < len(serverList) + 1:
+          selectedServer += 1
+        pressed = True
+
+      if keyboard_event.scan_code == 105 and operatingSystem == "linux" or keyboard_event.scan_code == 75 and operatingSystem == "windows": #left
+        if selectedCommand > 0:
+          selectedCommand -= 1
+
+        if selectedLoginCommand > 0:
+          selectedLoginCommand -= 1
+        pressed = True
+
+      if keyboard_event.scan_code == 106 and operatingSystem == "linux" or keyboard_event.scan_code == 77 and operatingSystem == "windows": #right
+        if selectedCommand < len(commands) - 1:
+          selectedCommand += 1
+
+        if selectedLoginCommand < len(loginCommands) - 1:
+          selectedLoginCommand += 1
+        pressed = True
+
+      if keyboard_event.scan_code == 28:
+        enter = True
+        pressed = True
 
 
+# function to login through /secret
 def login(usernameL, passwordL):
   global serverMessage
   global username
@@ -118,6 +185,7 @@ def login(usernameL, passwordL):
 
   return False
 
+# function to login through /login
 def loginCookie(usernameL, passwordL):
   global serverMessage
   global username
@@ -144,26 +212,24 @@ def loginCookie(usernameL, passwordL):
     serverMessage = r.text
     return False
 
+# function to automatically login to the server by using the cookie
 def loginWithoutCredentials():
   global username
-  try:
-    cookieFile = open("cookie.txt", "r")
+  
+  if (readCookie()):
     headers = {
-      'Cookie': 'auth=' + cookieFile.read()
+      'Cookie': 'auth=' + readCookie()
     }
-    cookieFile.close()
-    x = requests.get(url + '/secret', headers = headers)
+
+    r = requests.get(url + '/secret', headers = headers)
     
-    if int(x.status_code) == 200:
-      username = x.text
+    if r.status_code == 200:
+      username = r.text
       return True 
       
-    else:
-      return False
+  return False
 
-  except IOError:
-    return False
-
+# function to register a new user
 def register(usernameL, passwordL):
   global serverMessage
   global username
@@ -187,6 +253,7 @@ def register(usernameL, passwordL):
   
   return False
 
+# function to delete an existing user
 def deleteUser(usernameL, passwordL):
   global serverMessage
 
@@ -207,54 +274,45 @@ def deleteUser(usernameL, passwordL):
   return False
 
 
-def printMods():
-  global selectedMod
+# function to print all the files
+def printFiles():
+  global selectedFile
   global upToDate
 
   if not upToDate:
-    checkMods()
+    checkFiles()
   
-  print("\nMODS:")
+  print("\nFILES:")
 
-  for i in range(0, len(modList)):
-    if i == selectedMod:
-      print(colored("> ", "red"), modList[i])
+  for i in range(0, len(filesList)):
+    if i == selectedFile:
+      print(colored("> ", "red"), filesList[i])
     else:
-      print("> " + modList[i])
+      print("> " + filesList[i])
 
-def checkMods():
-  global modList
+# function to get the list of all the files in a server
+def checkFiles():
+  global filesList
   global upToDate
   global serverMessage
   global serverCurrent
   global currentServerPassword
 
-  previousModList = modList
+  previousfilesList = filesList
 
-  while modList == previousModList:
+  while filesList == previousfilesList:
     r = requests.request("GET", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword)
 
     if r.status_code == 200:
-      modIndexes = []
+      fileIndexes = []
       for m in re.finditer('"', r.text):
-        modIndexes.append(m.start())
+        fileIndexes.append(m.start())
 
-      modList = []
+      filesList = []
 
-      for i in range(0, len(modIndexes)):
+      for i in range(0, len(fileIndexes)):
         if i % 2 == 1:
-          modList.append(r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
-          # print("> " + r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
-
-      # print(modList)
-      
-      # if previousModList == modList:
-      #   upToDate = False
-      # else:
-      #   upToDate = True
-
-      # print(modList)
-      # print(previousModList)
+          filesList.append(r.text[fileIndexes[i - 1] + 1 : fileIndexes[i]])
 
     else:
       serverMessage = r.text
@@ -263,39 +321,7 @@ def checkMods():
 
   upToDate = True
 
-def getMods():
-  global modList
-  global upToDate
-  global serverMessage
-
-  r = requests.request("GET", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword)
-
-  if r.status_code == 200:
-    modIndexes = []
-    for m in re.finditer('"', r.text):
-      modIndexes.append(m.start())
-
-    modList = []
-
-    for i in range(0, len(modIndexes)):
-      if i % 2 == 1:
-        modList.append(r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
-        # print("> " + r.text[modIndexes[i - 1] + 1 : modIndexes[i]])
-
-    # print(modList)
-    
-    # if previousModList == modList:
-    #   upToDate = False
-    # else:
-    #   upToDate = True
-
-    # print(modList)
-    # print(previousModList)
-
-  else:
-    serverMessage = r.text
-
-
+# function to print all the available commands
 def printCommands():
   for i in range(len(commands)):
     if i == selectedCommand:
@@ -308,6 +334,7 @@ def printCommands():
     else:
       print(colored(commands[i], color), "  ", end = '', flush = True)
 
+# function to print all the available login commands
 def printLoginCommands():
   for i in range(len(loginCommands)):
     if i == selectedLoginCommand:
@@ -321,6 +348,7 @@ def printLoginCommands():
       print(colored(loginCommands[i], color), "  ", end = '', flush = True)
 
 
+# function to print all the available servers
 def printServers():
   global serverList
   global selectedServer
@@ -345,7 +373,8 @@ def printServers():
     print(colored("\n>  Logout", "red"))
   else:
     print("\n> Logout")
-  
+
+# function to get the list of all the available servers
 def checkServers():
   global serverList
   global upToDateServer
@@ -364,6 +393,7 @@ def checkServers():
 
   upToDateServer = True
 
+# function to create a new server
 def createServer(serverName, serverPassword):
   global serverMessage
   global username
@@ -408,6 +438,7 @@ def createServer(serverName, serverPassword):
 
   return False
 
+# function to delete an existing server
 def deleteServer():
   global serverCurrent
   global currentServerPassword
@@ -451,6 +482,7 @@ def deleteServer():
 
   return False
 
+# function to login into a server
 def loginServer(serverPassword):
   global serverList
   global serverMessage
@@ -473,9 +505,8 @@ def loginServer(serverPassword):
     return False
 
 
-
-
-def uploadMod(path):
+# function to upload a new file to a server
+def uploadFile(path):
   global serverMessage
   global upToDate
 
@@ -484,6 +515,7 @@ def uploadMod(path):
 
   payload = {}
 
+  # DOUBLE CHECK THIS PIECE OF CODE
   files = [
     ('avatar',(filename, open(path,'rb'),'application/java-archive'))
   ]
@@ -519,7 +551,8 @@ def uploadMod(path):
 
   return False
 
-def downloadMod(modName):
+# function to download a file from a server
+def downloadFile(fileName):
   global serverMessage
 
   downloadPath = "./download/"
@@ -529,15 +562,15 @@ def downloadMod(modName):
       'Cookie': 'auth=' + readCookie()
     }
 
-    r = requests.request("GET", url + '/download' + "?mod=" + modName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
+    r = requests.request("GET", url + '/download' + "?fileName=" + fileName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
     if r.status_code == 200:
       try:
-        file = open(downloadPath + modName, "xb")
+        file = open(downloadPath + fileName, "xb")
         file.write(r.content)
 
       except IOError:
-        file = open(downloadPath + modName, "wb")
+        file = open(downloadPath + fileName, "wb")
         file.write(r.content)
       
       finally:
@@ -552,15 +585,15 @@ def downloadMod(modName):
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
 
-    r = requests.request("GET", url + '/download' + "?mod=" + modName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
+    r = requests.request("GET", url + '/download' + "?fileName=" + fileName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
     
     if r.status_code == 200:
       try:
-        file = open(downloadPath + modName, "xb")
+        file = open(downloadPath + fileName, "xb")
         file.write(r.content)
 
       except IOError:
-        file = open(downloadPath + modName, "wb")
+        file = open(downloadPath + fileName, "wb")
         file.write(r.content)
       
       finally:
@@ -572,7 +605,8 @@ def downloadMod(modName):
 
   return False
 
-def deleteMod(modName):
+# function to delete a file within a server
+def deleteFile(fileName):
   global upToDate
   global serverMessage
 
@@ -581,7 +615,7 @@ def deleteMod(modName):
       'Cookie': 'auth=' + readCookie()
     }
 
-    r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&modName=" + modName, headers = headers)
+    r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&fileName=" + fileName, headers = headers)
 
     if r.status_code == 200:
       upToDate = False
@@ -596,7 +630,7 @@ def deleteMod(modName):
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
 
-    r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&modName=" + modName, headers = headers)
+    r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&fileName=" + fileName, headers = headers)
 
     if r.status_code == 200:
       upToDate = False
@@ -606,54 +640,6 @@ def deleteMod(modName):
       return False
 
   return False
-
-def my_keyboard_hook(keyboard_event):
-    global selectedMod
-    global selectedCommand
-    global selectedServer
-    global pressed
-    global enter
-    global selectedLoginCommand
-    
-    # print("Name:", keyboard_event.name)
-    # print("Scan code:", keyboard_event.scan_code)
-    # print("Time:", keyboard_event.time)
-    if pressed == False:
-      if keyboard_event.scan_code == 103 and operatingSystem == "linux" or keyboard_event.scan_code == 72 and operatingSystem == "windows": #up
-        if selectedMod > 0:
-          selectedMod -= 1
-
-        if selectedServer > 0:
-          selectedServer -= 1
-        pressed = True
-
-      if keyboard_event.scan_code == 108 and operatingSystem == "linux" or keyboard_event.scan_code == 80 and operatingSystem == "windows": #down
-        if selectedMod < len(modList) - 1:
-          selectedMod += 1
-
-        if selectedServer < len(serverList) + 1:
-          selectedServer += 1
-        pressed = True
-
-      if keyboard_event.scan_code == 105 and operatingSystem == "linux" or keyboard_event.scan_code == 75 and operatingSystem == "windows": #left
-        if selectedCommand > 0:
-          selectedCommand -= 1
-
-        if selectedLoginCommand > 0:
-          selectedLoginCommand -= 1
-        pressed = True
-
-      if keyboard_event.scan_code == 106 and operatingSystem == "linux" or keyboard_event.scan_code == 77 and operatingSystem == "windows": #right
-        if selectedCommand < len(commands) - 1:
-          selectedCommand += 1
-
-        if selectedLoginCommand < len(loginCommands) - 1:
-          selectedLoginCommand += 1
-        pressed = True
-
-      if keyboard_event.scan_code == 28:
-        enter = True
-        pressed = True
 
 
 def main():
@@ -665,13 +651,13 @@ def main():
   global upToDateServer
   global upToDate
   global serverOwner
-  global modList
-  global selectedMod
+  global filesList
+  global selectedFile
 
   running = True
   loggedIn = False
   serverLoggedIn = False
-  keyboard.on_press(my_keyboard_hook)
+  keyboard.on_press(keyboardEventHandler)
 
   if loginWithoutCredentials():
     loggedIn = True
@@ -763,9 +749,9 @@ def main():
             enter = False
             serverLoggedIn = True
             upToDateServer = False
-            modList = ["null"]
+            filesList = ["null"]
             upToDate = False
-            selectedMod = 0
+            selectedFile = 0
 
         # Logout
         elif selectedServer == len(serverList) + 1:
@@ -786,14 +772,13 @@ def main():
           if loginServer(serverPassword):
             enter = False
             serverLoggedIn = True
-            modList = ["null"]
+            filesList = ["null"]
             upToDate = False
-            selectedMod = 0
-            # getMods()
+            selectedFile = 0
 
       clear()
 
-    # MOD MANAGEMENT
+    # FILE MANAGEMENT
     else:
       if serverOwner:
         print("User:", colored(username, 'cyan'))
@@ -802,7 +787,7 @@ def main():
 
       print("\nServer: " + serverCurrent)
 
-      printMods()
+      printFiles()
 
       print()
 
@@ -813,26 +798,26 @@ def main():
         pass
       pressed = False
 
-      # upload mod
+      # upload file
       if selectedCommand == 0 and enter == True:
         serverMessage = ""
         enter = False
         try:
           path = askopenfilename()
-          uploadMod(path)
+          uploadFile(path)
         except IOError:
           print("File error")
 
-      # download mod
+      # download file
       elif selectedCommand == 1 and enter == True:
         serverMessage = ""
         enter = False
-        downloadMod(modList[selectedMod])
+        downloadFile(filesList[selectedFile])
 
-      # delete mod
+      # delete file
       elif selectedCommand == 2 and enter == True:
-        if len(modList) == 0:
-          serverMessage = "No mod to delete!"
+        if len(filesList) == 0:
+          serverMessage = "No file to delete!"
           enter = False
         else:
           serverMessage = ""
@@ -840,7 +825,7 @@ def main():
           choice = input("Are you sure? [Yes/No]: ")
           enter = False
           if choice == "Yes" or choice == "yes" or choice == "ye" or choice == "y":
-            deleteMod(modList[selectedMod])
+            deleteFile(filesList[selectedFile])
 
       # change server
       elif selectedCommand == 3 and enter == True:

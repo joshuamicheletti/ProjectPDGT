@@ -517,7 +517,7 @@ def uploadFile(path):
 
   # DOUBLE CHECK THIS PIECE OF CODE
   files = [
-    ('avatar',(filename, open(path,'rb'),'application/java-archive'))
+    ('avatar',(filename, open(path,'rb'),'application/octet-stream'))
   ]
 
   if readCookie():
@@ -641,10 +641,12 @@ def deleteFile(fileName):
 
   return False
 
-
+# MAIN FUNCTION
 def main():
+  # clear the screen
   clear()
 
+  # access to global variables
   global enter
   global pressed
   global serverMessage
@@ -654,36 +656,52 @@ def main():
   global filesList
   global selectedFile
 
+  # internal flags to determin the state of the program
+  # to save if the program should be running or not
   running = True
+  # to save if the user is logged in or not
   loggedIn = False
+  # to save if the user is logged in a server or not
   serverLoggedIn = False
+
+  # link the keyboard api to the function that handles inputs
   keyboard.on_press(keyboardEventHandler)
 
+  # try to login through cookie
   if loginWithoutCredentials():
     loggedIn = True
 
+  # MAIN LOOP
   while running:
+    # print the server message (errors, info etc...)
     if (serverMessage != ""):
       print(colored(serverMessage + "\n", 'yellow'))
 
     # LOGIN
     if not loggedIn:
-
+      # print the login commands (login, login with cookie, register, delete, close)
       printLoginCommands()
       
+      # keyboard event polling
       while not pressed and not enter:
         pass
       pressed = False
 
       # login
       if selectedLoginCommand == 0 and enter == True:
+        # clean the previous server message
         serverMessage = ""
+        # flush the inputs buffer before getting user inputs
         flushInput()
+        # get the username from the user
         usernameL = input("\nUsername: ")
         print()
+        # get the password from the user without showing it
         passwordL = stdiomask.getpass(mask='*')
+        # check if the login worked
         if login(usernameL, passwordL):
           loggedIn = True
+        # set enter to false to listen for a new command
         enter = False
 
       # login with cookie

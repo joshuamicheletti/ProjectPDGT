@@ -764,12 +764,12 @@ def main():
           print()
           serverPassword = stdiomask.getpass(mask='*')
           if createServer(serverName, serverPassword):
-            enter = False
             serverLoggedIn = True
             upToDateServer = False
             filesList = ["null"]
             upToDate = False
             selectedFile = 0
+          enter = False
 
         # Logout
         elif selectedServer == len(serverList) + 1:
@@ -787,8 +787,8 @@ def main():
           flushInput()
           print()
           serverPassword = stdiomask.getpass(mask='*')
+          enter = False
           if loginServer(serverPassword):
-            enter = False
             serverLoggedIn = True
             filesList = ["null"]
             upToDate = False

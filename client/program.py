@@ -328,14 +328,18 @@ def printFiles():
   global selectedFile
   global upToDate
 
+  # check for the file list if something changed
   if not upToDate:
     checkFiles()
   
   print("\nFILES:")
 
+  # iterate over the file list
   for i in range(0, len(filesList)):
+    # print a red arrow and the file name is the item to print is the one selected
     if i == selectedFile:
       print(colored("> ", "red"), filesList[i])
+    # print an arrow and the file name
     else:
       print("> " + filesList[i])
 
@@ -347,52 +351,75 @@ def checkFiles():
   global serverCurrent
   global currentServerPassword
 
+  # stores the previous file list to check if the input filelist from the minio server changed
   previousfilesList = filesList
 
+  # make HTTP GET requests on /upload until it finds a new file list, different from the previous one
   while filesList == previousfilesList:
     r = requests.request("GET", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword)
 
+    # if the request returns 200 OK
     if r.status_code == 200:
+      # make a new fileIndexes array to store the index of the string containing the mod names
       fileIndexes = []
+      # store all the indexes of the string that correspond to places with the character "
       for m in re.finditer('"', r.text):
         fileIndexes.append(m.start())
 
+      # empty the files list
       filesList = []
 
+      # cicle through the indexes containing the positions of the file names
       for i in range(0, len(fileIndexes)):
+        # every 2 cycles
         if i % 2 == 1:
+          # add the string between the last 2 characters ", aka the file name
           filesList.append(r.text[fileIndexes[i - 1] + 1 : fileIndexes[i]])
 
+    # if the request returns a status code different from 200 OK
     else:
+      # notify the error through the server message
       serverMessage = r.text
 
+    # wait before trying again, in case the files list didn't change
     time.sleep(0.1)
 
+  # notify that the file list is up to date
   upToDate = True
 
 # function to print all the available commands
 def printCommands():
+  # iterate over the possible commands
   for i in range(len(commands)):
+    # if we are printing the selected command, print it red
     if i == selectedCommand:
       color = "red"
+    # otherwise print it white
     else:
       color = "white"
 
+    # if we're printing the last command, just print the command
     if i == len(commands) - 1:
       print(colored(commands[i], color))
+    # if we're printing any other command, leave a space between them
     else:
       print(colored(commands[i], color), "  ", end = '', flush = True)
 
 # function to print all the available login commands
 def printLoginCommands():
+  # iterate over the possible commands to login
   for i in range(len(loginCommands)):
+    # if we are printing the selected login command, print it in red
     if i == selectedLoginCommand:
       color = "red"
+    # otherwise print it in white
     else:
       color = "white"
 
+    # if we're printing the last login command, just print the command
     if i == len(loginCommands) - 1:
       print(colored(loginCommands[i], color))
+    # if we're printing any other login command, leave a space between them
     else:
       print(colored(loginCommands[i], color), "  ", end = '', flush = True)
 
@@ -402,22 +429,30 @@ def printServers():
   global serverList
   global selectedServer
   global upToDateServer
+
   print("\nSERVERS: ")
 
+  # if there was a change in the server list
   if not upToDateServer:
+    # check the servers available
     checkServers()
-
+    
+  # print the New Server option, if it's the selected option, print it green
   if selectedServer == 0:
     print(colored("> ", "green"), colored("New Server\n", "green"))
   else:
     print("> New Server\n")
 
+  # iterate over the servers list
   for i in range(0, len(serverList)):
+    # if we're printing the selected server, color the arrow red
     if i + 1 == selectedServer:
       print(colored("> ", "red"), serverList[i])
+    # otherwise print everything white
     else:
       print("> " + serverList[i])
 
+  # print the Logout option, if it's the selected option, print it red
   if selectedServer == len(serverList) + 1:
     print(colored("\n>  Logout", "red"))
   else:
@@ -428,18 +463,29 @@ def checkServers():
   global serverList
   global upToDateServer
 
+  # make an HTTP GET request to /servers
   r = requests.get(url + "/servers")
 
+  # if the request returns 200 OK
   if r.status_code == 200:
+    # wipe the serverList
     serverList = []
+    # create a new serverIndexes array to store the position of the strings containing the server name
     serverIndexes = []
+
+    # find instances of the character ", which defines the beginning and end of a server name string
     for m in re.finditer('"', r.text):
+      # store their positions in the serverIndexes array
       serverIndexes.append(m.start())
 
+    # iterate over the serverIndexes
     for i in range(0, len(serverIndexes)):
+      # every 2 cycles
       if i % 2 == 1:
+        # store the string in between the last 2 characters ", which is the server name
         serverList.append(r.text[serverIndexes[i - 1] + 1 : serverIndexes[i]])
 
+  # notify that the server list is up to date
   upToDateServer = True
 
 # function to create a new server

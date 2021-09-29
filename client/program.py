@@ -1,15 +1,29 @@
+# LIBRARIES
+
+# library for making HTTP requests
 import requests
+# library for encoding string to base64
 import base64
+# library for regular operations
 import re
+# library for interacting with the OS and running commands
 import os
+# library for interacting with the keyboard
 import keyboard
+# library for making system calls
 import sys
+# library for masking the password inputs
 import stdiomask
+# library for making wait() calls
 import time
+# library for writing colored text on the terminal
 from termcolor import colored
+# library for opening a popup window when asked to open a file
 from tkinter import Tk     # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
 
+# try to import libraries for clearing the input buffer
+# by checking weather or not the termios library can imported or not, we can check what operating system we're on
 try:
   import sys, termios
   operatingSystem = "linux"
@@ -17,45 +31,60 @@ except ImportError:
   import msvcrt
   operatingSystem = "windows"
 
+# set the Tk library to only display the file open window
 Tk().withdraw()
 
+
+# GLOBAL VARIABLES
+
+# url of destination where the webAPI is hosted
 url = "https://projectpdgt.herokuapp.com"
 # url = "http://localhost:2000"
 
+# variable for keeping track of what server we're logged in
 serverCurrent = ""
-
-filesList = []
-
+# variable to store the current password of the server we're logged into
+currentServerPassword = ""
+# array to store all the names of the available servers
 serverList = []
-
+# variable to keep track of what server we're selecting
 selectedServer = 0
-
-upToDate = True
-
+# boolean variable to keep track of when we need to update the servers list
 upToDateServer = False
 
+# variable to store the current username
+username = ""
+# variable to store the current user password
+password = ""
+# array to store the files contained in a server
+filesList = []
+# variable to keep track of what file we're selecting
 selectedFile = 0
+# boolean variable to keep track of when we need to update the files list
+upToDate = True
 
-selectedCommand = 0
-
+# variable to keep track of when to listen for keyboard inputs or not
 pressed = False
-
-selectedLoginCommand = 0
-
+# variable to keep know when we pressed Enter, which means when we're select an option
 enter = False
 
+# string to store messages coming from the webAPI
 serverMessage = ""
 
+# list of the login commands
 loginCommands = ["Login", "Login with Cookie", "Register", "Delete", "Close"]
-
+# variable to keep track of what command to login we're selecting
+selectedLoginCommand = 0
+# list of the commands within a server
 commands = ["Upload File", "Download File", "Delete File", "Change Server", "Delete Server", "Logout", "Close"]
+# variable to keep track of what command we're selecting
+selectedCommand = 0
 
-username = ""
-password = ""
-
-currentServerPassword = ""
-
+# boolean variable to keep track of weather the user is a server owner or not
 serverOwner = False
+
+
+# UTILITY FUNCTIONS
 
 # function to flush the standard input, prevents unwanted input on commands
 def flushInput():
@@ -164,6 +193,8 @@ def keyboardEventHandler(keyboard_event):
         enter = True
         pressed = True
 
+
+# USER MANAGEMENT FUNCTIONS
 
 # function to login through /secret
 def login(usernameL, passwordL):
@@ -323,6 +354,8 @@ def deleteUser(usernameL, passwordL):
   return False
 
 
+# PRINTING FUNCTIONS
+
 # function to print all the files
 def printFiles():
   global selectedFile
@@ -423,7 +456,6 @@ def printLoginCommands():
     else:
       print(colored(loginCommands[i], color), "  ", end = '', flush = True)
 
-
 # function to print all the available servers
 def printServers():
   global serverList
@@ -488,6 +520,9 @@ def checkServers():
   # notify that the server list is up to date
   upToDateServer = True
 
+
+# SERVERS MANAGEMENT FUNCTIONS
+
 # function to create a new server
 def createServer(serverName, serverPassword):
   global serverMessage
@@ -498,36 +533,61 @@ def createServer(serverName, serverPassword):
   global currentServerPassword
   global serverOwner
 
+  # try to read the cookies file
   if readCookie():
+    # if a cookie file is found and a valid cookie inside is found
+    # set it as a header
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
 
+    # make an HTTP POST request to /servers
     r = requests.post(url + "/servers" + "?serverName=" + serverName + "&serverPassword=" + serverPassword, headers = headers)
 
+    # if the response is 200 OK
     if r.status_code == 200:
+      # set the current server as the response text
       serverCurrent = r.text
+      # set the current server password as the password set to the new server in the request
       currentServerPassword = serverPassword
+      # set the user as server owner
       serverOwner = True
+      # notify that the server list is not up to date anymore
+      upToDateServer = False
       return True
+
+    # if the response is anything else
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
   
+  # try to encode username and password in base64
   if encodeBase64(username, password):
+    # if the username and the password exist and can be encoded in base64
+    # set the encoded string as an auth header
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
 
+    # make an HTTP POST request to /servers
     r = requests.post(url + "/servers" + "?serverName=" + serverName + "&serverPassword=" + serverPassword, headers = headers)
 
+    # if the response is 200 OK
     if r.status_code == 200:
+      # set the server current as the response text
       serverCurrent = r.text
+      # set the current server password as the one used to create the server
       currentServerPassword = serverPassword
+      # set the user as the server owner
       serverOwner = True
+      # notify that the server list is not up to date anymore
       upToDateServer = False
       return True
+
+    # if the response is anything else 
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
 
@@ -541,37 +601,61 @@ def deleteServer():
   global serverMessage
   global upToDateServer
 
+  # try to read the cookie file
   if readCookie():
+    # if the file exists and contains a valid cookie
+    # set the cookie as a header
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
 
+    # make an HTTP DELETE request to /servers
     r = requests.delete(url + "/servers" + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
+    # if the response status is 200 OK
     if r.status_code == 200:
+      # wipe the server current name
       serverCurrent = ""
+      # wipe the server current password
       currentServerPassword = ""
+      # set the user as non server owner
       serverOwner = False
+      # notify that the server list is not up to date anymore
       upToDateServer = False
       return True
+
+    # if the response is anything else
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
 
+  # try to encode username and password in base64
   if encodeBase64(username, password):
+    # if username and password exist and are valid
+    # set the encoded string as auth header
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
 
+    # make an HTTP DELETE request to /servers
     r = requests.delete(url + "/servers" + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
+    # if the response is 200 OK
     if r.status_code == 200:
+      # wipe the server current name
       serverCurrent = ""
+      # wipe the server current password
       currentServerPassword = ""
+      # set the user as non server owner
       serverOwner = False
+      # notify that the server list is not up to date
       upToDateServer = False
       return True
+
+    # if the response is anything else
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
 
@@ -586,61 +670,93 @@ def loginServer(serverPassword):
   global serverOwner
   global username
 
+  # make an HTTP GET request to /servers
   r = requests.get(url + "/servers" + "?serverName=" + serverList[selectedServer - 1] + "&serverPassword=" + serverPassword)
 
+  # if the response is 200 OK
   if r.status_code == 200:
+    # store the response string containing server name and username
     info = r.text.split(",")
+    # set the server current name as the server name in the response
     serverCurrent = info[0]
+    # if the username in the response corresponds to the logged in user
     if info[1] == username:
+      # set the user to server owner
       serverOwner = True
+    # set the current server password to the password used to login
     currentServerPassword = serverPassword
     return True
+
+  # if the response is anything else
   else:
+    # set the error as server message
     serverMessage = r.text
     return False
 
+
+# FILES MANAGEMENT FUNCTIONS
 
 # function to upload a new file to a server
 def uploadFile(path):
   global serverMessage
   global upToDate
 
+  # split the string everytime "/" is encountered
   splitString = path.split("/")
+  # set the filename as the last string after the last "/" character (which is the filename in the path)
   filename = splitString[len(splitString) - 1]
 
   payload = {}
 
-  # DOUBLE CHECK THIS PIECE OF CODE
+  # set the request files field with the file name and opening the file through the paths in binary
+  # sets the file nickname as "avatar" and the file MIME type as "application/octet-stream", to accomodate for every file type
   files = [
-    ('avatar',(filename, open(path,'rb'),'application/octet-stream'))
+    ('avatar', (filename, open(path, 'rb'), 'application/octet-stream'))
   ]
 
+  # try to read the cookie file
   if readCookie():
+    # if the cookie file exists and contains a valid cookie
+    # set the cookie as a header
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
 
+    # make an HTTP POST request to /upload
     r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
 
+    # if the response is 200 OK
     if r.status_code == 200:
+      # notify that the files list is not up to date
       upToDate = False
       return True
 
+    # if the response is anything else
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
 
+  # try to encode base64 the username and password
   if encodeBase64(username, password):
+    # if the username and password exist and are valid
+    # set the encoded string as an auth header
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
 
+    # make an HTTP POST request to /upload
     r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
 
+    # if the response is 200 OK
     if r.status_code == 200:
+      # notify that the files list is not up to date
       upToDate = False
       return True
+
+    # if the response is anything else
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
 
@@ -650,25 +766,34 @@ def uploadFile(path):
 def downloadFile(fileName):
   global serverMessage
 
+  # download path for the files to download
   downloadPath = "./download/"
 
+  # try to make a folder in the path in case it doesn't exist already
   try:
     os.mkdir(downloadPath)
   except IOError:
     pass
 
+  # try to read the cookie file
   if readCookie():
+    # if the cookie file exists and contains a valid cookie
+    # set the cookie as a header
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
 
+    # make an HTTP GET request to /download
     r = requests.request("GET", url + '/download' + "?fileName=" + fileName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
+    # if the response is 200 OK
     if r.status_code == 200:
+      # try to open and write on the downloaded file
+      # creating it if it doesn't already exist
       try:
         file = open(downloadPath + fileName, "xb")
         file.write(r.content)
-
+      # or writing on it if it already exists
       except IOError:
         file = open(downloadPath + fileName, "wb")
         file.write(r.content)
@@ -676,22 +801,31 @@ def downloadFile(fileName):
       finally:
         return True
     
+    # if the response is anything else
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
   
+  # try to encode username and password in base64
   if encodeBase64(username, password):
+    # if username and password exist and are valid
+    # set the encoded string as auth header
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
 
+    # make an HTTP GET request to /download
     r = requests.request("GET", url + '/download' + "?fileName=" + fileName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
     
+    # if the response is 200 OK
     if r.status_code == 200:
+      # try to open and write on the downloaded file
+      # creating if if it doesn't already exist
       try:
         file = open(downloadPath + fileName, "xb")
         file.write(r.content)
-
+      # or writing on it if it already exists
       except IOError:
         file = open(downloadPath + fileName, "wb")
         file.write(r.content)
@@ -699,7 +833,9 @@ def downloadFile(fileName):
       finally:
         return True
 
+    # if the response is anything else
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
 
@@ -710,38 +846,57 @@ def deleteFile(fileName):
   global upToDate
   global serverMessage
 
+  # try to read the cookie file
   if readCookie():
+    # if the cookie file exists and contains a valid cookie
+    # set the cookie as header
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
 
+    # make an HTTP DELETE request to /upload
     r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&fileName=" + fileName, headers = headers)
 
+    # if the response is 200 OK
     if r.status_code == 200:
+      # notify that the files list is not up to date
       upToDate = False
       return True
 
+    # if the response is anything else
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
 
+  # try to encode username and password in base64
   if encodeBase64(username, password):
+    # if username and password exist and are valid
+    # set the encoded string as auth header
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
 
+    # make an HTTP DELETE request to /upload
     r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&fileName=" + fileName, headers = headers)
 
+    # if the response is 200 OK
     if r.status_code == 200:
+      # notify that the files list is not up to date
       upToDate = False
       return True
+
+    # if the response is anything else
     else:
+      # set the error as server message
       serverMessage = r.text
       return False
 
   return False
 
+
 # MAIN FUNCTION
+
 def main():
   # clear the screen
   clear()

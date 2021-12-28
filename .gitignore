@@ -25,4 +25,4 @@ download/
 Minio/
 *.txt
 client/launch.bat
-
+client/launch.sh

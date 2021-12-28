@@ -7,4 +7,6 @@ sudo pip install stdiomask
 sudo pip install termcolor
 sudo apt install python3-tk
 
-sudo python3 program.py
+echo "#!/bin/bash"> ../launch.sh
+echo sudo python3 program.py>> ../launch.sh
+chmod a+x ../launch.sh

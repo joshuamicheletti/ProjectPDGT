@@ -24,4 +24,5 @@ uploads/
 download/
 Minio/
 *.txt
+client/launch.bat
 

@@ -1144,12 +1144,19 @@ def main():
 
       # download file
       elif selectedCommand == 1 and enter == True:
-        # wipe the server message
-        serverMessage = ""
-        # set enter to false to listen for a new input
-        enter = False
-        # download the file specified
-        downloadFile(filesList[selectedFile])
+        # check if the file list isn't empty
+        if len(filesList) == 0:
+          # notify that there isn't any file to download
+          serverMessage = "No file to download!"
+          # set enter to false to listen for a new input
+          enter = False
+        else:
+          # wipe the server message
+          serverMessage = ""
+          # set enter to false to listen for a new input
+          enter = False
+          # download the file specified
+          downloadFile(filesList[selectedFile])
 
       # delete file
       elif selectedCommand == 2 and enter == True:

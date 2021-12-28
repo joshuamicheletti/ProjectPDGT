@@ -3,4 +3,4 @@ pip install keyboard
 pip install stdiomask
 pip install termcolor
 
-python program.py
+echo python program.py> ../launch.bat

@@ -10,3 +10,5 @@ sudo apt install python3-tk
 echo "#!/bin/bash"> ../launch.sh
 echo sudo python3 program.py>> ../launch.sh
 chmod a+x ../launch.sh
+
+printf "\nTO RUN THE PROGRAM, HEAD TO 'ProjectPDGT/client' AND RUN 'launch.bat'\n\n"

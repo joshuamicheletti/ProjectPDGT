@@ -28,8 +28,6 @@ const minioClient = new minio.Client({
   useSSL: false                       // HTTP transfer only
 });
 
-// minioClient.setRequestOptions({timeout: 3000});
-
 // middleware for handling json and cookies
 app.use(express.json());
 app.use(cookieparser());
@@ -163,7 +161,7 @@ function attemptLogin(username, password) {
   // encode the salt and password into sha256
   var hash = encodeSaltPasswordSha256(user.salt, password);
   // check if the new generated string is the same as the one saved (meaning that passwords match and the user is logged in)
-  return(hash == user.hash);
+  return (hash == user.hash);
 }
 
 // function to verify if the user is authenticated to access the server
@@ -178,8 +176,9 @@ function attemptAuth(req) {
     if (cookies.has(req.cookies.auth)){
       const username = cookies.get(req.cookies.auth);
       console.log("L'utente: " + username + " si è collegato tramite cookie");
+
       // the user is authenticated
-      return true;
+      return [username, 0];
     }
   }
   
@@ -196,12 +195,16 @@ function attemptAuth(req) {
   }
   
   // decode the authorization header in base64
-  const [login, password] = decodeBase64(req.headers.authorization);
+  const [username, password] = decodeBase64(req.headers.authorization);
   
-  console.log("Login: " + login + ", password: " + password);
+  console.log("Login: " + username + ", password: " + password);
   
   // attempt a login with the authorization header credentials
-  return attemptLogin(login, password);
+  if (attemptLogin(username, password)) {
+    return [username, password];
+  } else {
+    return false;
+  }
 }
 
 
@@ -214,21 +217,6 @@ app.get('/check', (req, res) => {
   res.status(200).end();
 });
 
-// get /secret to test the authorization features
-app.get('/secret', (req, resp) => {
-  if (attemptAuth(req)) {
-    if (req.headers.authorization) {
-      const [login, password] = decodeBase64(req.headers.authorization);
-      resp.status(200).send(login).end();
-    } else {
-      resp.status(200).send(cookies.get(req.cookies.auth)).end();
-    }
-    
-  } else {
-    resp.set('WWW-Authenticate', 'Basic realm="Cose segrete"').status(401).send("Wrong Username or Password").end();
-  }
-});
-
 // get /hash to test the sha256 algorithm
 app.get('/hash', (req, resp) => {
   const input = req.query.input;
@@ -238,16 +226,33 @@ app.get('/hash', (req, resp) => {
   resp.type('text/plain').status(200).send(h.hex()).end();
 });
 
-// post /login to login into the server and get a cookie
-app.post('/login', (req, resp) => {
-  // store the credentials passed through query
-  const username = req.query.username;
-  const password = req.query.password;
-  // check if the username and password correspond to any user stored in 'logins'
-  if (!attemptLogin(username, password)) {
-    resp.status(403).send("Wrong Username or Password").end();
+// get /login to test the authorization features
+app.get('/login', (req, resp) => {
+
+  const loginResult = attemptAuth(req);
+
+  if (loginResult == false) {
+    resp.status(403).send("Wrong Login Credentials").end();
     return;
   }
+
+  const username = loginResult[0];
+
+  resp.status(200).send(username).end();
+});
+
+// post /loginCookie to login into the server and get a cookie
+app.post('/loginCookie', (req, resp) => {
+
+  const loginResult = attemptAuth(req);
+
+  if (loginResult == false) {
+    resp.status(403).send("Wrong Login Credentials").end();
+    return;
+  }
+
+  const username = loginResult[0];
+
   // random number to generate a cookie
   const now = new Date().toString();
   // convert the random number into a sha256 encoded string
@@ -380,14 +385,18 @@ app.post('/upload', upload.single('avatar'), (req, res) => {
     return false;
   }
 
+  const loginResult = attemptAuth(req);
+
   // check if the user is authorized
-  if (!attemptAuth(req)) {
+  if (loginResult == false) {
     res.status(400).send("Wrong login info").end();
     return false;
   }
   
   // obtain the username from the request
-  var username = obtainUser(req);
+  var username = loginResult[0];
+
+  console.log("username while uploading: " + username);
 
   // check if the upload user is the server owner (aka allowed to upload)
   if (servers.get(req.query.serverName).owner != username) {
@@ -481,7 +490,10 @@ app.get('/upload', (req, res) => {
 // delete /upload to delete a file in a server
 app.delete('/upload', (req, res) => {
   // check if the user is a valid logged in user
-  if (!attemptAuth(req)) {
+
+  const loginResult = attemptAuth(req);
+
+  if (loginResult == false) {
     res.status(400).send("Wrong login info").end();
     return;
   }
@@ -507,7 +519,7 @@ app.delete('/upload', (req, res) => {
   }
 
   // obtain the username from the request
-  var username = obtainUser(req);
+  var username = loginResult[0];
 
   // check if the user is the server owner
   if (username != servers.get(req.query.serverName).owner) {
@@ -563,7 +575,9 @@ app.delete('/upload', (req, res) => {
 // get /download to download the specified file
 app.get('/download', (req, res) => {
   // check if the user is authorized
-  if (!attemptAuth(req)) {
+  const loginResult = attemptAuth(req);
+
+  if (loginResult == false) {
     res.status(400).send("Wrong login info").end();
     return false;
   }
@@ -642,9 +656,6 @@ app.get('/download', (req, res) => {
   });
 });
 
-
-// WRONG, REMEMBER TO PUT THE AUTHENTICATION CHECK
-
 // get /servers to get a list of servers or login into one
 app.get('/servers', (req, resp) => {
   // if the request doesn't specify a server
@@ -653,6 +664,13 @@ app.get('/servers', (req, resp) => {
     resp.status(200).send(Array.from(servers.keys())).end();
     console.log(servers);
     return;
+  }
+
+  const loginResult = attemptAuth(req);
+
+  if (loginResult == false) {
+    res.status(400).send("Wrong login info").end();
+    return false;
   }
 
   // check that the server requested exists
@@ -676,6 +694,17 @@ app.get('/servers', (req, resp) => {
 
 // post /servers to create a new server
 app.post('/servers', (req, resp) => {
+  // check if the user is authorized
+  const loginResult = attemptAuth(req);
+
+  if (loginResult == false) {
+    resp.status(400).send("Invalid User Login").end();
+    return;
+  }
+
+  // get the username (either from the cookie or the basic authorization)
+  var username = loginResult[0];
+
   // check if the request contains a server name and password
   if (!req.query.serverName || !req.query.serverPassword) {
     resp.status(400).send("Invalid Server Info").end();
@@ -696,15 +725,6 @@ app.post('/servers', (req, resp) => {
   // store the server info in variables
   var serverName = req.query.serverName;
   var serverPassword = req.query.serverPassword;
-
-  // check if the user is authorized
-  if (attemptAuth(req) == false) {
-    resp.status(400).send("Invalid User Login").end();
-    return;
-  }
-
-  // get the username (either from the cookie or the basic authorization)
-  var username = obtainUser(req);
 
   // encode the new password in sha256 with the salt
   var hash = encodeSaltPasswordSha256(saltCounter.toString(), serverPassword);

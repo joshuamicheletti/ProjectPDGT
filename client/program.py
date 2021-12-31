@@ -244,8 +244,8 @@ def loginCookie(usernameL, passwordL):
     # make an HTTP GET request to /loginCookie to login and get a cookie
     r = requests.post(url + '/loginCookie', headers = headers)
 
-    # if the response is 200 OK
-    if r.status_code == 200:
+    # if the response is correct
+    if r.status_code >= 200 and r.status_code < 300:
       # create or write a cookie.txt file with the cookie received from the response
       try:
         cookieFile = open("cookie.txt", "x")
@@ -315,7 +315,7 @@ def register(usernameL, passwordL):
     r = requests.post(url + '/users', headers = headers)
 
     # if the response status is 200 OK
-    if r.status_code == 200:
+    if r.status_code >= 200 and r.status_code < 300:
       # set the current username as the username used in the request
       username = usernameL
       # set the current password as the password used in the request
@@ -540,17 +540,17 @@ def createServer(serverName, serverPassword):
   global currentServerPassword
   global serverOwner
 
-
+  # try to read cookie and set it as a header
   if readCookie():
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
-  
+  # try to encode username and password and set it as a header
   elif encodeBase64(username, password):
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
-
+  # no form of authentication available
   else:
     return False
 
@@ -558,7 +558,7 @@ def createServer(serverName, serverPassword):
   r = requests.post(url + "/servers" + "?serverName=" + serverName + "&serverPassword=" + serverPassword, headers = headers)
 
   # if the response is 200 OK
-  if r.status_code == 200:
+  if r.status_code >= 200 and r.status_code < 300:
     # set the current server as the response text
     serverCurrent = r.text
     # set the current server password as the password set to the new server in the request
@@ -575,7 +575,6 @@ def createServer(serverName, serverPassword):
     serverMessage = r.text
     return False
 
-
 # function to delete an existing server
 def deleteServer():
   global serverCurrent
@@ -586,16 +585,17 @@ def deleteServer():
   global username
   global password
 
+  # try to read cookie and set it as a header
   if readCookie():
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
-  
+  # try to encode username and password and set it as a header
   elif encodeBase64(username, password):
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
-
+  # no form of authentication available
   else:
     return False
 
@@ -603,7 +603,7 @@ def deleteServer():
   r = requests.delete(url + "/servers" + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
   # if the response status is 200 OK
-  if r.status_code == 200:
+  if r.status_code >= 200 and r.status_code < 300:
     # wipe the server current name
     serverCurrent = ""
     # wipe the server current password
@@ -620,7 +620,6 @@ def deleteServer():
     serverMessage = r.text
     return False
 
-
 # function to login into a server
 def loginServer(serverPassword):
   global serverList
@@ -631,16 +630,17 @@ def loginServer(serverPassword):
   global username
   global password
 
+  # try to read cookie and set it as a header
   if readCookie():
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
-  
+  # try to encode username and password and set it as a header
   elif encodeBase64(username, password):
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
-
+  # no form of authentication available
   else:
     return False
 
@@ -648,7 +648,7 @@ def loginServer(serverPassword):
   r = requests.get(url + "/servers" + "?serverName=" + serverList[selectedServer - 1] + "&serverPassword=" + serverPassword, headers = headers)
 
   # if the response is 200 OK
-  if r.status_code == 200:
+  if r.status_code >= 200 and r.status_code < 300:
     # store the response string containing server name and username
     info = r.text.split(",")
     # set the server current name as the server name in the response
@@ -690,16 +690,17 @@ def uploadFile(path):
     ('avatar', (filename, open(path, 'rb'), 'application/octet-stream'))
   ]
 
+  # try to read cookie and set it as a header
   if readCookie():
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
-  
+  # try to encode username and password and set it as a header
   elif encodeBase64(username, password):
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
-
+  # no form of authentication available
   else:
     return False
 
@@ -707,7 +708,7 @@ def uploadFile(path):
   r = requests.request("POST", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers, data = payload, files = files)
 
   # if the response is 200 OK
-  if r.status_code == 200:
+  if r.status_code >= 200 and r.status_code < 300:
     # notify that the files list is not up to date
     upToDate = False
     return True
@@ -733,16 +734,17 @@ def downloadFile(fileName):
   except IOError:
     pass
 
+  # try to read cookie and set it as a header
   if readCookie():
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
-  
+  # try to encode username and password and set it as a header
   elif encodeBase64(username, password):
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
-
+  # no form of authentication available
   else:
     return False
 
@@ -751,7 +753,7 @@ def downloadFile(fileName):
   r = requests.request("GET", url + '/download' + "?fileName=" + fileName + "&serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword, headers = headers)
 
   # if the response is 200 OK
-  if r.status_code == 200:
+  if r.status_code >= 200 and r.status_code < 300:
     # try to open and write on the downloaded file
     # creating it if it doesn't already exist
     try:
@@ -776,53 +778,35 @@ def deleteFile(fileName):
   global upToDate
   global serverMessage
 
-  # try to read the cookie file
+
+  # try to read cookie and set it as a header
   if readCookie():
-    # if the cookie file exists and contains a valid cookie
-    # set the cookie as header
     headers = {
       'Cookie': 'auth=' + readCookie()
     }
-
-    # make an HTTP DELETE request to /upload
-    r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&fileName=" + fileName, headers = headers)
-
-    # if the response is 200 OK
-    if r.status_code == 200:
-      # notify that the files list is not up to date
-      upToDate = False
-      return True
-
-    # if the response is anything else
-    else:
-      # set the error as server message
-      serverMessage = r.text
-      return False
-
-  # try to encode username and password in base64
-  if encodeBase64(username, password):
-    # if username and password exist and are valid
-    # set the encoded string as auth header
+  # try to encode username and password and set it as a header
+  elif encodeBase64(username, password):
     headers = {
       'Authorization': 'Basic ' + encodeBase64(username, password)
     }
+  # no form of authentication available
+  else:
+    return False
 
-    # make an HTTP DELETE request to /upload
-    r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&fileName=" + fileName, headers = headers)
+  # make an HTTP DELETE request to /upload
+  r = requests.request("DELETE", url + '/upload' + "?serverName=" + serverCurrent + "&serverPassword=" + currentServerPassword + "&fileName=" + fileName, headers = headers)
 
-    # if the response is 200 OK
-    if r.status_code == 200:
-      # notify that the files list is not up to date
-      upToDate = False
-      return True
+  # if the response is 200 OK
+  if r.status_code >= 200 and r.status_code < 300:
+    # notify that the files list is not up to date
+    upToDate = False
+    return True
 
-    # if the response is anything else
-    else:
-      # set the error as server message
-      serverMessage = r.text
-      return False
-
-  return False
+  # if the response is anything else
+  else:
+    # set the error as server message
+    serverMessage = r.text
+    return False
 
 
 # MAIN FUNCTION

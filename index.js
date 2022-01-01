@@ -321,13 +321,27 @@ app.post('/users', (req, resp) => {
 app.delete('/users', (req, resp) => {
   // check if the request has an authorization header
   if (!req.headers.authorization) {
-    // respond with 401 UNAUTHORIZED
-    resp.status(401).send("Not Authorized").end();
+    // respond with 400 BAD REQUEST
+    resp.status(400).send("Not Authorized").end();
     return false;
   }
 
   // decode the authorization header from base64 to read the credentials
   const [user, password] = decodeBase64(req.headers.authorization);
+
+  // check if the username is a valid string
+  if (user.length == 0) {
+    // respond with 400 BAD REQUEST
+    resp.status(400).send("Invalid User").end();
+    return false;
+  }
+
+  // check if the password is a valid string
+  if (password.length == 0) {
+    // respond with 400 BAD REQUEST
+    resp.status(400).send("Invalid Password").end();
+    return false;
+  }
 
   // check if the user is a registered user in the list of accounts
   if (!logins.has(user)) {
@@ -866,8 +880,8 @@ app.delete('/servers', (req, resp) => {
 
   // check if the server mentioned in the request exists
   if (!servers.has(req.query.serverName)) {
-    // respond with 400 BAD REQUEST
-    resp.status(400).send("No server with that name").end();
+    // respond with 404 FILE NOT FOUND
+    resp.status(404).send("No server with that name").end();
     return false;
   }
 

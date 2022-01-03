@@ -673,7 +673,9 @@ app.get('/download', (req, resp) => {
 
   // catch any error
   bucketStream.on("error", function(error) {
-    console.log(error);
+    // respond with 503 SERVICE UNAVAILABLE
+    resp.status(503).send("Minio Error").end();
+    return console.log(error);
   });
 
   // when the stream ends and we have all the files list
@@ -705,6 +707,8 @@ app.get('/download', (req, resp) => {
   
       // catch any stream error
       dataStream.on('error', function(err) {
+        // respond with 503 SERVICE UNAVAILABLE
+        resp.status(503).send("Minio Error").end();
         console.log(err);
         return false;
       });

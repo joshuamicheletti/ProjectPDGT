@@ -17,7 +17,7 @@ const upload = multer({storage: multer.memoryStorage()});
 
 // Minio blob storage server's client
 const minioClient = new minio.Client({
-  endPoint: 'mathorgadaorc.ddns.net', // IP
+  endPoint: 'solidgallium.ddns.net', // IP
   port: 9000,                         // port
   accessKey: "minio",                 // username
   secretKey: "password",              // password

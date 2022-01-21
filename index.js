@@ -201,8 +201,8 @@ app.post('/minio', (req, resp) => {
   console.log("REQUEST: " + req.query.serverAddress + ":" + req.query.serverPort);
   
   minioClient = new minio.Client({
-    endPoint: req.query.serverAddress,  // IP
-    port: req.query.serverPort,         // port
+    endPoint: req.query.serverAddress,   // IP
+    port: parseInt(req.query.serverPort),         // port
     accessKey: "minio",                 // username
     secretKey: "password",              // password
     signatureVersion: 'v4',             // verification version

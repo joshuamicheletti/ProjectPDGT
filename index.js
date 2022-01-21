@@ -17,7 +17,7 @@ const upload = multer({storage: multer.memoryStorage()});
 
 // Minio blob storage server's client
 var minioClient = new minio.Client({
-  endPoint: 'solidgallium.ddns.net', // IP
+  endPoint: 'solidgallium.ddns.net',  // IP
   port: 9000,                         // port
   accessKey: "minio",                 // username
   secretKey: "password",              // password
@@ -198,6 +198,8 @@ app.post('/minio', (req, resp) => {
 	return false;  
   }
   
+  console.log(req);
+  
   minioClient = new minio.Client({
     endPoint: req.query.serverAddress,  // IP
     port: req.query.serverPort,         // port
@@ -206,6 +208,8 @@ app.post('/minio', (req, resp) => {
     signatureVersion: 'v4',             // verification version
     useSSL: false                       // HTTP transfer only
   });
+  
+  console.log(minioClient);
   
   // map for storing login info (username, password (salt + hash))
   logins = new Map();

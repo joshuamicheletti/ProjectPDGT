@@ -198,7 +198,7 @@ app.post('/minio', (req, resp) => {
 	return false;  
   }
   
-  console.log("REQUEST: " + req);
+  console.log("REQUEST: " + req.query.serverAddress + ":" + req.query.serverPort);
   
   minioClient = new minio.Client({
     endPoint: req.query.serverAddress,  // IP
@@ -209,7 +209,7 @@ app.post('/minio', (req, resp) => {
     useSSL: false                       // HTTP transfer only
   });
   
-  console.log("MINIO CLIENT: " + minioClient);
+  console.log("MINIO CLIENT: " + minioClient.endPoint + ":" + minioClient.port);
   
   // map for storing login info (username, password (salt + hash))
   logins = new Map();

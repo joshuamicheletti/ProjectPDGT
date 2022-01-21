@@ -16,7 +16,7 @@ const minio = require('minio');
 const upload = multer({storage: multer.memoryStorage()});
 
 // Minio blob storage server's client
-const minioClient = new minio.Client({
+var minioClient = new minio.Client({
   endPoint: 'solidgallium.ddns.net', // IP
   port: 9000,                         // port
   accessKey: "minio",                 // username
@@ -89,7 +89,7 @@ function encodeSaltPasswordSha256(salt, password) {
 }
 
 // map for storing login info (username, password (salt + hash))
-const logins = new Map();
+var logins = new Map();
 
 // fetch the login info stored in the 'users.json' file in the bucket 'info' in the Minio server
 minioClient.getObject('info', "users.json", async function(err, dataStream) {
@@ -109,7 +109,7 @@ minioClient.getObject('info', "users.json", async function(err, dataStream) {
 
 
 // map for storing servers info (server name, server password (salt + hash), server owner)
-const servers = new Map();
+var servers = new Map();
 
 // fetch the login info stored in the 'servers.json' file in the bucket 'info' in the Minio server
 minioClient.getObject('info', "servers.json", async function(err, dataStream) {
@@ -191,6 +191,63 @@ function attemptAuth(req) {
 
 
 // HTTP REQUESTS MANAGEMENT
+
+app.post('/minio', (req, resp) => {
+  if (!req.query.serverAddress && !req.query.serverPort) {
+	resp.status(400).send("No minio server info").end();
+	return false;  
+  }
+  
+  minioClient = new minio.Client({
+    endPoint: req.query.serverAddress,  // IP
+    port: req.query.serverPort,         // port
+    accessKey: "minio",                 // username
+    secretKey: "password",              // password
+    signatureVersion: 'v4',             // verification version
+    useSSL: false                       // HTTP transfer only
+  });
+  
+  // map for storing login info (username, password (salt + hash))
+  logins = new Map();
+
+  // fetch the login info stored in the 'users.json' file in the bucket 'info' in the Minio server
+  minioClient.getObject('info', "users.json", async function(err, dataStream) {
+    // if an error occurs, return the function and display the error
+    if (err) {
+      return console.log(err);
+    }
+    // store the string coming from the stream
+    usersString = await streamToString(dataStream);
+    // parse the string into a javascript object
+    usersObject = JSON.parse(usersString);
+    // store the values from the object into the 'logins' map
+    for (var key in usersObject) {
+      logins.set(key, usersObject[key]);
+    }
+  });
+
+
+  // map for storing servers info (server name, server password (salt + hash), server owner)
+  servers = new Map();
+
+  // fetch the login info stored in the 'servers.json' file in the bucket 'info' in the Minio server
+  minioClient.getObject('info', "servers.json", async function(err, dataStream) {
+    // if an error occurs, return the function and display the error
+    if (err) {
+      return console.log(err);
+    }
+    // store the string coming from the stream
+    serversString = await streamToString(dataStream);
+    // parse the string into a javascript object
+    serversObject = JSON.parse(serversString);
+    // store the values from the object into the 'servers' map
+    for (var key in serversObject) {
+      servers.set(key, serversObject[key]);
+    }
+  });
+  
+  resp.status(200).send("New Minio server setup").end();
+});
 
 // get /check to check the logins and servers maps
 app.get('/check', (req, resp) => {

@@ -1,5 +1,7 @@
 # ProjectPDGT
 
+Published under GNU GPLv3 license
+
 Web API to handle files devided between servers (buckets).
 
 This tool comes with a small client to access the functionalities of the API, but all the methods are accessible through HTTP requests.

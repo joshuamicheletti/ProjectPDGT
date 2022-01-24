@@ -192,21 +192,25 @@ function attemptAuth(req) {
 
 // HTTP REQUESTS MANAGEMENT
 
+// post /minio to setup a new minio storage server
 app.post('/minio', (req, resp) => {
+  // check if the request has query for the minio server address and port
   if (!req.query.serverAddress && !req.query.serverPort) {
+	// return 400 BAD REQUEST  
 	resp.status(400).send("No minio server info").end();
 	return false;  
   }
   
   console.log("REQUEST: " + req.query.serverAddress + ":" + req.query.serverPort);
   
+  // setup a new minio server object with the new address
   minioClient = new minio.Client({
     endPoint: req.query.serverAddress,   // IP
-    port: parseInt(req.query.serverPort),         // port
-    accessKey: "minio",                 // username
-    secretKey: "password",              // password
-    signatureVersion: 'v4',             // verification version
-    useSSL: false                       // HTTP transfer only
+    port: parseInt(req.query.serverPort),// port
+    accessKey: "minio",                  // username
+    secretKey: "password",               // password
+    signatureVersion: 'v4',              // verification version
+    useSSL: false                        // HTTP transfer only
   });
   
   console.log("MINIO CLIENT: " + minioClient.endPoint + ":" + minioClient.port);

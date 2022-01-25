@@ -261,7 +261,7 @@ app.post('/minio', (req, resp) => {
 app.get('/check', (req, resp) => {
   console.log(servers);
   console.log(logins);
-  resp.status(200).end();
+  resp.status(200).send("test").type("text/plain").end();
 });
 
 // get /hash to test the sha256 algorithm
@@ -442,7 +442,7 @@ app.delete('/users', (req, resp) => {
       // remove the user from the logins map
       logins.delete(user);
       // respond with 200 OK and the information of the deleted user
-      resp.status(200).send("Deleted user: " + user).set({'content-type': 'text/plain; charset = utf-8'}).end();
+      resp.status(200).send("Deleted user: " + user).end();
     }
   });
 });

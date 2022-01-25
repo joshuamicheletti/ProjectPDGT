@@ -442,7 +442,7 @@ app.delete('/users', (req, resp) => {
       // remove the user from the logins map
       logins.delete(user);
       // respond with 200 OK and the information of the deleted user
-      resp.status(200).send("Deleted user: " + user).end();
+      resp.status(200).send("Deleted user: " + user).set({'content-type': 'text/plain; charset = utf-8'}).end();
     }
   });
 });
@@ -1031,11 +1031,11 @@ app.delete('/servers', (req, resp) => {
 
 
 
-// listen for requests :)
+// listen for requests :
 const listener = app.listen(process.env.PORT, () => {
  console.log("Your app is listening on port " + listener.address().port);
 });
 
-// const listener = app.listen(2000, () => {
-//   console.log("Your app is listening on port " + listener.address().port);
-// });
+//const listener = app.listen(2000, () => {
+//  console.log("Your app is listening on port " + listener.address().port);
+//});

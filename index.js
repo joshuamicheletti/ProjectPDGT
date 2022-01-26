@@ -197,7 +197,7 @@ app.post('/minio', (req, resp) => {
   // check if the request has query for the minio server address and port
   if (!req.query.serverAddress && !req.query.serverPort) {
 	// return 400 BAD REQUEST  
-	resp.status(400).send("No minio server info").end();
+	resp.status(400).type('text/plain').send("No minio server info").end();
 	return false;  
   }
   
@@ -254,7 +254,7 @@ app.post('/minio', (req, resp) => {
     }
   });
   
-  resp.status(200).send("New Minio server setup").end();
+  resp.status(200).type('text/plain').send("New Minio server setup").end();
 });
 
 // get /check to check the logins and servers maps

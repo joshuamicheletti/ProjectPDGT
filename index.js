@@ -261,7 +261,7 @@ app.post('/minio', (req, resp) => {
 app.get('/check', (req, resp) => {
   console.log(servers);
   console.log(logins);
-  resp.status(200).send("test").type("text/plain").end();
+  resp.status(200).type('text/plain').send("test").end();
 });
 
 // get /hash to test the sha256 algorithm
@@ -270,7 +270,7 @@ app.get('/hash', (req, resp) => {
   
   const h = sha256.create();
   h.update(input);
-  resp.type('text/plain').status(200).send(h.hex()).end();
+  resp.status(200).type('text/plain').send(h.hex()).end();
 });
 
 // get /login to test the authorization features
@@ -281,7 +281,7 @@ app.get('/login', (req, resp) => {
   // if the user is not authorized
   if (loginResult == false) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong Login Credentials").end();
+    resp.status(403).type('text/plain').send("Wrong Login Credentials").end();
     return false;
   }
 
@@ -289,7 +289,7 @@ app.get('/login', (req, resp) => {
   const username = loginResult[0];
 
   // respond with 200 OK and the information of the user that is connected
-  resp.status(200).send(username).end();
+  resp.status(200).type('text/plain').send(username).end();
 });
 
 // post /loginCookie to login into the server and get a cookie
@@ -299,7 +299,7 @@ app.post('/loginCookie', (req, resp) => {
   // if the user is not authorized
   if (loginResult == false) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong Login Credentials").end();
+    resp.status(403).type('text/plain').send("Wrong Login Credentials").end();
     return false;
   }
 
@@ -317,7 +317,7 @@ app.post('/loginCookie', (req, resp) => {
   // send the cookie to the user connecting
   resp.cookie('auth', sessionId);
   // respond with 201 CREATED (as it created the new cookie) and the information of the user 
-  resp.status(201).send(username).end();
+  resp.status(201).type('text/plain').send(username).end();
 });
 
 // post /users to create a new account and save it in 'logins'
@@ -325,7 +325,7 @@ app.post('/users', (req, resp) => {
   // check if the request has an authorization header to get the user credentials from
   if (!req.headers.authorization) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("Invalid Registration").end();
+    resp.status(400).type('text/plain').send("Invalid Registration").end();
     return false;
   }
 
@@ -337,14 +337,14 @@ app.post('/users', (req, resp) => {
   // check if the username is a valid string
   if (user.length == 0) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("Invalid User").end();
+    resp.status(400).type('text/plain').send("Invalid User").end();
     return false;
   }
 
   // check if the password is a valid string
   if (password.length == 0) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("Invalid Password").end();
+    resp.status(400).type('text/plain').send("Invalid Password").end();
     return false;
   }
 
@@ -352,7 +352,7 @@ app.post('/users', (req, resp) => {
   if (logins.has(user)) {
     console.log("User " + user + " already exists");
     // respond with 409 CONFLICT
-    resp.status(409).send("User already registered").end();
+    resp.status(409).type('text/plain').send("User already registered").end();
     return false;
   }
 
@@ -368,7 +368,7 @@ app.post('/users', (req, resp) => {
     // check if an error occurs while storing the file in the Minio server
     if (error) {
       // respond with 503 SERVICE UNAVAILABLE
-      resp.status(503).send("Minio Error").end();
+      resp.status(503).type('text/plain').send("Minio Error").end();
       return console.log(error);
     }
     // if everything went well, we can update the logins map with the new entry
@@ -377,7 +377,7 @@ app.post('/users', (req, resp) => {
       // increase the salt counter
       saltCounter++;
       // respond with 201 CREATED
-      resp.status(201).send(user).end();
+      resp.status(201).type('text/plain').send(user).end();
     }
   });
 });
@@ -387,7 +387,7 @@ app.delete('/users', (req, resp) => {
   // check if the request has an authorization header
   if (!req.headers.authorization) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("Not Authorized").end();
+    resp.status(400).type('text/plain').send("Not Authorized").end();
     return false;
   }
 
@@ -397,21 +397,21 @@ app.delete('/users', (req, resp) => {
   // check if the username is a valid string
   if (user.length == 0) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("Invalid User").end();
+    resp.status(400).type('text/plain').send("Invalid User").end();
     return false;
   }
 
   // check if the password is a valid string
   if (password.length == 0) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("Invalid Password").end();
+    resp.status(400).type('text/plain').send("Invalid Password").end();
     return false;
   }
 
   // check if the user is a registered user in the list of accounts
   if (!logins.has(user)) {
     // respond with 404 FILE NOT FOUND
-    resp.status(404).send("User Not Found").end();
+    resp.status(404).type('text/plain').send("User Not Found").end();
     return false;
   }
 
@@ -421,7 +421,7 @@ app.delete('/users', (req, resp) => {
   // check if the password matches the one saved in the account
   if (hash != logins.get(user).hash) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong password").end();
+    resp.status(403).type('text/plain').send("Wrong password").end();
     return false;
   }
 
@@ -434,7 +434,7 @@ app.delete('/users', (req, resp) => {
     // check if an error occurs while storing the file in the Minio server
     if (error) {
       // respond with 409 SERVICE UNAVAILABLE
-      resp.status(409).send("Minio Error").end();
+      resp.status(409).type('text/plain').send("Minio Error").end();
       return console.log(error);
     }
     // if everything went well and the user has been deleted from the "users.json" file
@@ -442,7 +442,7 @@ app.delete('/users', (req, resp) => {
       // remove the user from the logins map
       logins.delete(user);
       // respond with 200 OK and the information of the deleted user
-      resp.status(200).send("Deleted user: " + user).end();
+      resp.status(200).type('text/plain').send("Deleted user: " + user).end();
     }
   });
 });
@@ -454,14 +454,14 @@ app.post('/upload', upload.single('avatar'), (req, resp) => {
   // check if the request has info about the target server
   if (!req.query.serverName || !req.query.serverPassword) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send('Invalid Server Name or Password').end();
+    resp.status(400).type('text/plain').send('Invalid Server Name or Password').end();
     return false;
   }
 
   // check if the targeted server exists
   if (!servers.has(req.query.serverName)) {
     // respond with 404 FILE NOT FOUND
-    resp.status(404).send("No server with that name").end();
+    resp.status(404).type('text/plain').send("No server with that name").end();
     return false;
   }
 
@@ -471,7 +471,7 @@ app.post('/upload', upload.single('avatar'), (req, resp) => {
   // check if the password matches with the server
   if (hash != servers.get(req.query.serverName).hash) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Access Denied, wrong server password").end();
+    resp.status(403).type('text/plain').send("Access Denied, wrong server password").end();
     return false;
   }
 
@@ -480,7 +480,7 @@ app.post('/upload', upload.single('avatar'), (req, resp) => {
 
   if (loginResult == false) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong login info").end();
+    resp.status(403).type('text/plain').send("Wrong login info").end();
     return false;
   }
   
@@ -490,7 +490,7 @@ app.post('/upload', upload.single('avatar'), (req, resp) => {
   // check if the upload user is the server owner (aka allowed to upload)
   if (servers.get(req.query.serverName).owner != username) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Not allowed to upload files").end();
+    resp.status(403).type('text/plain').send("Not allowed to upload files").end();
     return false;
   }
 
@@ -511,7 +511,7 @@ app.post('/upload', upload.single('avatar'), (req, resp) => {
   stream.on('error', function(err) {
     console.log(err);
     // respond with 503 SERVICE UNAVAILABLE
-    resp.status(503).send("Minio Timeout Error").end();
+    resp.status(503).type('text/plain').send("Minio Timeout Error").end();
   });
 
   // once we have all the data from the stream
@@ -520,7 +520,7 @@ app.post('/upload', upload.single('avatar'), (req, resp) => {
     for (var i = 0; i < output.length; i++) {
       if (req.file.originalname == output[i]) {
         // respond with 409 CONFLICT
-        resp.status(409).send("File already exists").end();
+        resp.status(409).type('text/plain').send("File already exists").end();
         return false;
       }
     }
@@ -532,11 +532,11 @@ app.post('/upload', upload.single('avatar'), (req, resp) => {
       // check for Minio errors
       if (error) {
         // respond with 503 SERVICE UNAVAILABLE
-        resp.status(503).send("Minio Error").end();
+        resp.status(503).type('text/plain').send("Minio Error").end();
         return console.log(error);
       } else {
         // respond with 201 CREATED
-        resp.status(201).send("File succesfully uploaded").end();
+        resp.status(201).type('text/plain').send("File succesfully uploaded").end();
       }
     });
   });
@@ -547,14 +547,14 @@ app.get('/upload', (req, resp) => {
   // check if the request has info about the target server
   if (!req.query.serverName || !req.query.serverPassword) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("No server info").end();
+    resp.status(400).type('text/plain').send("No server info").end();
     return false;
   }
 
    // check if the targeted server exists
    if (!servers.has(req.query.serverName)) {
     // respond with 404 FILE NOT FOUND
-    resp.status(404).send("No server with that name").end();
+    resp.status(404).type('text/plain').send("No server with that name").end();
     return false;
   }
 
@@ -564,7 +564,7 @@ app.get('/upload', (req, resp) => {
   // check if the password matches with the server
   if (hash != servers.get(req.query.serverName).hash) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong server password").end();
+    resp.status(403).type('text/plain').send("Wrong server password").end();
     return false;
   }
 
@@ -585,12 +585,12 @@ app.get('/upload', (req, resp) => {
   stream.on('error', function(err) {
     console.log(err);
     // respond with 503 SERVICE UNAVAILABLE
-    resp.status(503).send("Minio Timeout Error").end();
+    resp.status(503).type('text/plain').send("Minio Timeout Error").end();
   });
   // once we have all the objects
   stream.on('end', function() {
     // send the list to the client
-    resp.json(output);
+    resp.status(200).type('application/json').json(output).end();
   });
 });
 
@@ -601,7 +601,7 @@ app.delete('/upload', (req, resp) => {
 
   if (loginResult == false) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong login info").end();
+    resp.status(403).type('text/plain').send("Wrong login info").end();
     return false;
   }
 
@@ -611,14 +611,14 @@ app.delete('/upload', (req, resp) => {
   // check if the request has info about the target server
   if (!req.query.serverName || !req.query.serverPassword) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("No server info").end();
+    resp.status(400).type('text/plain').send("No server info").end();
     return false;
   }
 
   // check if the targeted server exists
   if (!servers.has(req.query.serverName)) {
     // respond with 404 FILE NOT FOUND
-    resp.status(404).send("No server with that name").end();
+    resp.status(404).type('text/plain').send("No server with that name").end();
     return false;
   }
 
@@ -628,21 +628,21 @@ app.delete('/upload', (req, resp) => {
   // check if the password matches with the server
   if (hash != servers.get(req.query.serverName).hash) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong server password").end();
+    resp.status(403).type('text/plain').send("Wrong server password").end();
     return false;
   }
 
   // check if the upload user is the server owner (aka allowed to upload)
   if (servers.get(req.query.serverName).owner != username) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Not allowed to upload files").end();
+    resp.status(403).type('text/plain').send("Not allowed to upload files").end();
     return false;
   }
 
   // check if the request contains a file name
   if (!req.query.fileName) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("No file info").end();
+    resp.status(400).type('text/plain').send("No file info").end();
     return false;
   }
 
@@ -672,17 +672,17 @@ app.delete('/upload', (req, resp) => {
         // catch any error
         if (err) {
           // respond with 503 SERVICE UNAVAILABLE
-          resp.status(503).send("Minio error").end();
+          resp.status(503).type('text/plain').send("Minio error").end();
           return console.log(err);
         } else {
           // respond with 200 OK
-          resp.status(200).send("File removed correctly").end();
+          resp.status(200).type('text/plain').send("File removed correctly").end();
           return true;
         }
       });
     } else {
       // respond with 404 FILE NOT FOUND
-      resp.status(404).send("No file with that name found").end();
+      resp.status(404).type('text/plain').send("No file with that name found").end();
       return false;
     }
   });
@@ -695,20 +695,20 @@ app.get('/download', (req, resp) => {
 
   if (loginResult == false) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong login info").end();
+    resp.status(403).type('text/plain').send("Wrong login info").end();
     return false;
   }
 
   // check if the request contains any file name
   if (!req.query.fileName) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("Invalid file").end();
+    resp.status(400).type('text/plain').send("Invalid file").end();
     return false;
   }
 
   if (!req.query.serverName || !req.query.serverPassword) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("No server info").end();
+    resp.status(400).type('text/plain').send("No server info").end();
     return false;
   }
 
@@ -718,7 +718,7 @@ app.get('/download', (req, resp) => {
   // check if the password matches with the server
   if (hash != servers.get(req.query.serverName).hash) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong server password").end();
+    resp.status(403).type('text/plain').send("Wrong server password").end();
     return false;
   }
 
@@ -739,7 +739,7 @@ app.get('/download', (req, resp) => {
   // catch any error
   bucketStream.on("error", function(error) {
     // respond with 503 SERVICE UNAVAILABLE
-    resp.status(503).send("Minio Error").end();
+    resp.status(503).type('text/plain').send("Minio Error").end();
     return console.log(error);
   });
 
@@ -757,7 +757,7 @@ app.get('/download', (req, resp) => {
     // if the file doesn't exist in the minio bucket
     if (!found) {
       // respond with 404 FILE NOT FOUND
-      resp.status(404).send("file not found").end();
+      resp.status(404).type('text/plain').send("file not found").end();
       return false;
     }
 
@@ -766,14 +766,14 @@ app.get('/download', (req, resp) => {
       // catch any Minio error
       if (err) {
         // respond with 503 SERVICE UNAVAILABLE
-        resp.status(503).send("Minio Error").end();
+        resp.status(503).type('text/plain').send("Minio Error").end();
         return console.log(err);
       }
   
       // catch any stream error
       dataStream.on('error', function(err) {
         // respond with 503 SERVICE UNAVAILABLE
-        resp.status(503).send("Minio Error").end();
+        resp.status(503).type('text/plain').send("Minio Error").end();
         console.log(err);
         return false;
       });
@@ -803,14 +803,14 @@ app.get('/servers', (req, resp) => {
 
   if (loginResult == false) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong login info").end();
+    resp.status(403).type('text/plain').send("Wrong login info").end();
     return false;
   }
 
   // check that the server requested exists
   if (!servers.has(req.query.serverName)) {
     // respond with 404 FILE NOT FOUND
-    resp.status(404).send("No server with that name").end();
+    resp.status(404).type('text/plain').send("No server with that name").end();
     return false;
   }
 
@@ -820,13 +820,13 @@ app.get('/servers', (req, resp) => {
   // check if the server password is correct
   if (hash != servers.get(req.query.serverName).hash) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Incorrect Password").end();
+    resp.status(403).type('text/plain').send("Incorrect Password").end();
     return false;
   }
 
   // return the name of the server that the user logged in to and the respective owner
   // with code 200 OK
-  resp.status(200).send(req.query.serverName + "," + servers.get(req.query.serverName).owner).end();
+  resp.status(200).type('text/plain').send(req.query.serverName + "," + servers.get(req.query.serverName).owner).end();
 });
 
 // post /servers to create a new server
@@ -836,7 +836,7 @@ app.post('/servers', (req, resp) => {
 
   if (loginResult == false) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Invalid User Login").end();
+    resp.status(403).type('text/plain').send("Invalid User Login").end();
     return false;
   }
 
@@ -846,21 +846,21 @@ app.post('/servers', (req, resp) => {
   // check if the request contains a server name and password
   if (!req.query.serverName || !req.query.serverPassword) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("Invalid Server Info").end();
+    resp.status(400).type('text/plain').send("Invalid Server Info").end();
     return false;
   }
 
   // check that the server isn't called 'info', info is a special bucket reserverd for storing servers and user data
   if (req.query.serverName == "info") {
     // respond with 409 CONFLICT
-    resp.status(409).send("Server can't be called 'info'").end();
+    resp.status(409).type('text/plain').send("Server can't be called 'info'").end();
     return false;
   }
 
   // check that the new server doesn't have the same name as a previous one
   if (servers.has(req.query.serverName)) {
     // respond with 409 CONFLICT
-    resp.status(409).send("Server with that name already exists").end();
+    resp.status(409).type('text/plain').send("Server with that name already exists").end();
     return false;
   }
 
@@ -881,7 +881,7 @@ app.post('/servers', (req, resp) => {
     // check for Minio errors
     if (error) {
       // respond with 503 SERVICE UNAVAILABLE
-      resp.status(503).send("Minio Error").end();
+      resp.status(503).type('text/plain').send("Minio Error").end();
       return console.log(error);
     } else {
       // create a new minio bucket to store the files of the new server
@@ -889,7 +889,7 @@ app.post('/servers', (req, resp) => {
         // check for Minio errors
         if (error) {
           // respond with 503 SERVICE UNAVAILABLE
-          resp.status(503).send("Minio Bucket Error").end();
+          resp.status(503).type('text/plain').send("Minio Bucket Error").end();
           return console.log(error);
         } else {
           // put 2 placeholder objects inside of the bucket (these objects will be invisible to the client,
@@ -898,14 +898,14 @@ app.post('/servers', (req, resp) => {
             // check for Minio errors
             if (error) {
               // respond with 503 SERVICE UNAVAILABLE
-              resp.status(503).send("Minio Error").end();
+              resp.status(503).type('text/plain').send("Minio Error").end();
               return console.log(error);
             } else {
               // put the second placeholder object
               minioClient.putObject(serverName, "2.txt", "do not read", function(error, etag) {
                 if (error) {
                   // respond with 503 SERVICE UNAVAILABLE
-                  resp.status(503).send("Minio Error").end();
+                  resp.status(503).type('text/plain').send("Minio Error").end();
                   return console.log(error);
                 }
                 // if everything went well
@@ -915,7 +915,7 @@ app.post('/servers', (req, resp) => {
                   // increase the salt counter
                   saltCounter++;
                   // respond with 201 CREATED and the server name of the new server
-                  resp.status(201).send(serverName).end();
+                  resp.status(201).type('text/plain').send(serverName).end();
                 }
               });
             }
@@ -933,7 +933,7 @@ app.delete('/servers', (req, resp) => {
 
   if (loginResult == false) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong login info").end();
+    resp.status(403).type('text/plain').send("Wrong login info").end();
     return false;
   }
 
@@ -943,14 +943,14 @@ app.delete('/servers', (req, resp) => {
   // check if the request has server info
   if (!req.query.serverName || !req.query.serverPassword) {
     // respond with 400 BAD REQUEST
-    resp.status(400).send("Wrong server info").end();
+    resp.status(400).type('text/plain').send("Wrong server info").end();
     return false;
   }
 
   // check if the server mentioned in the request exists
   if (!servers.has(req.query.serverName)) {
     // respond with 404 FILE NOT FOUND
-    resp.status(404).send("No server with that name").end();
+    resp.status(404).type('text/plain').send("No server with that name").end();
     return false;
   }
 
@@ -959,14 +959,14 @@ app.delete('/servers', (req, resp) => {
 
   if (hash != servers.get(req.query.serverName).hash) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Wrong server password").end();
+    resp.status(403).type('text/plain').send("Wrong server password").end();
     return false;
   }
 
   // check if the user in the request is the server owner
   if (username != servers.get(req.query.serverName).owner) {
     // respond with 403 FORBIDDEN
-    resp.status(403).send("Not allowed to delete server").end();
+    resp.status(403).type('text/plain').send("Not allowed to delete server").end();
     return false;
   }
 
@@ -983,7 +983,7 @@ app.delete('/servers', (req, resp) => {
   objectsStream.on('error', function(e) {
     console.log(e);
     // respond with 503 SERVICE UNAVAILABLE
-    resp.status(503).send("Minio error").end();
+    resp.status(503).type('text/plain').send("Minio error").end();
     return false;
   });
   // once the list is complete
@@ -993,14 +993,14 @@ app.delete('/servers', (req, resp) => {
       // check for errors
       if (e) {
         // respond with 503 SERVICE UNAVAILABLE
-        resp.status(503).send("Minio error").end();
+        resp.status(503).type('text/plain').send("Minio error").end();
         return console.log("Unable to remove objects ", e);
       } else {
         // remove the bucket of the server that is being deleted
         minioClient.removeBucket(req.query.serverName, function(e) {
           if (e) {
             // respond with 503 SERVICE UNAVAILABLE
-            resp.status(503).send("Minio error").end();
+            resp.status(503).type('text/plain').send("Minio error").end();
             return console.log("Unable to remove bucket");
           } else {
             // delete the server info from the temporary servers map
@@ -1011,7 +1011,7 @@ app.delete('/servers', (req, resp) => {
               // check for errors
               if (error) {
                 // respond with 503 SERVICE UNAVAILABLE
-                resp.status(503).send("Minio Error").end();
+                resp.status(503).type('text/plain').send("Minio Error").end();
                 return console.log(error);
               }
               // if everything went well
@@ -1019,7 +1019,7 @@ app.delete('/servers', (req, resp) => {
                 // update the servers map
                 servers.delete(req.query.serverName);
                 // respond with 200 OK and the information about the deleted server 
-                resp.status(200).send("Server " + req.query.serverName + " removed").end();
+                resp.status(200).type('text/plain').send("Server " + req.query.serverName + " removed").end();
               }
             });
           }

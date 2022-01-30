@@ -64,9 +64,10 @@ Questo client é scritto interamente in Python e sfrutta le seguenti librerie:
 
 Di seguito riportate sono le tre schermate principali del client che consentono rispettivamente la gestione di utenti, la gestione di server e la gestione di file all'interno del server:
 
-https://ibb.co/yPGV2w6
-https://ibb.co/M77wMtL
-https://ibb.co/KjHwKGw
+![img1](https://ibb.co/yPGV2w6)
+![img2](https://ibb.co/M77wMtL)
+![img3](https://ibb.co/KjHwKGw)
+
 
 Per installare il client sono disponibili script di installazione per Windows 10 e Ubuntu 20.04.
 

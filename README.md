@@ -62,6 +62,12 @@ Questo client é scritto interamente in Python e sfrutta le seguenti librerie:
 - tkinter
 - termos (ubuntu) / msvcrt (windows)
 
+Di seguito riportate sono le tre schermate principali del client che consentono rispettivamente la gestione di utenti, la gestione di server e la gestione di file all'interno del server:
+
+https://ibb.co/yPGV2w6
+https://ibb.co/M77wMtL
+https://ibb.co/KjHwKGw
+
 Per installare il client sono disponibili script di installazione per Windows 10 e Ubuntu 20.04.
 
 # Installazione
